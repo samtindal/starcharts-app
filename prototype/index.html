@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starcharts prototype</title>
+<style>
+  :root {
+    --bg: #0A1628;
+    --bg-deep: #060D18;
+    --line: #6B7684;
+    --line-faint: #3A4556;
+    --gold: #C9A227;
+    --gold-bright: #E8C547;
+    --parchment: #E8DCC4;
+    --planet: #AEB9C4;   /* silver, planets & nodes, distinct from gold signs */
+    --planet-bright: #E2EAF2;
+    --soft: #6FA08B;     /* verdigris green, trines & sextiles */
+    --hard: #6E9BC5;     /* steel blue, squares & oppositions (no red/pink/purple/orange) */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 35%, var(--bg) 0%, var(--bg-deep) 100%);
+    color: var(--parchment);
+    font-family: Georgia, 'Times New Roman', serif;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header { text-align: center; padding: 18px 12px 4px; }
+  h1 {
+    margin: 0; font-weight: normal; letter-spacing: .35em; text-transform: uppercase;
+    font-size: 20px; color: var(--gold);
+  }
+  h1 small { display: block; letter-spacing: .18em; font-size: 11px; color: var(--line); margin-top: 4px; }
+  #dateline {
+    font-size: 17px; margin: 8px 0 2px; color: var(--parchment);
+    font-variant-numeric: tabular-nums; min-height: 24px;
+  }
+  #hint { font-size: 12px; color: var(--line); font-style: italic; }
+  #controls { display: flex; gap: 8px; align-items: center; margin: 10px 0 4px; flex-wrap: wrap; justify-content: center; }
+  input[type="datetime-local"], button {
+    background: transparent; border: 1px solid var(--line-faint); color: var(--parchment);
+    font-family: inherit; font-size: 13px; padding: 6px 10px; border-radius: 3px;
+  }
+  button { cursor: pointer; color: var(--gold); border-color: var(--gold); }
+  button:hover { background: rgba(201,162,39,.12); }
+  #wrap { width: min(92vmin, 680px); }
+  svg { display: block; width: 100%; height: auto; }
+  #aspects {
+    width: min(92vmin, 680px); padding: 6px 8px 40px; font-size: 14px; line-height: 1.55;
+  }
+  #aspects h2 {
+    font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--line);
+    border-bottom: 1px solid var(--line-faint); padding-bottom: 6px; font-weight: normal;
+  }
+  .asp { padding: 3px 0; cursor: default; }
+  .asp b { color: var(--gold); font-weight: normal; }
+  .asp.soft b { color: #8FBFA9; }
+  .asp.hard b { color: #9FC0DE; }
+  .asp small { color: var(--line); }
+  .glyph-drag { cursor: grab; }
+  .glyph-drag:active { cursor: grabbing; }
+  #tip {
+    position: fixed; display: none; max-width: 260px; z-index: 10;
+    background: #0D1B2E; border: 1px solid var(--line-faint); border-radius: 4px;
+    padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--parchment);
+    box-shadow: 0 4px 18px rgba(0,0,0,.5); pointer-events: none;
+  }
+  #tip b { color: var(--gold); font-weight: normal; display: block; margin-bottom: 3px; }
+  #tip .more { color: var(--hard); font-style: italic; }
+  a.asp { display: block; color: inherit; text-decoration: none; }
+  a.asp:hover { background: rgba(201,162,39,.07); }
+  a.asp:hover small::after { content: '  read more \2192'; color: var(--gold); }
+  .sign-hit, .asp-hit { cursor: pointer; }
+  #legend {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    left: calc(50% + min(46vmin, 340px) + 24px);
+    width: 205px; padding: 14px 16px;
+    border: 1px solid var(--line-faint); border-radius: 4px;
+    background: rgba(13,27,46,.65); font-size: 12.5px; line-height: 1.45;
+  }
+  #legend h3 {
+    margin: 0 0 8px; font-size: 11px; font-weight: normal; color: var(--line);
+    letter-spacing: .28em; text-transform: uppercase;
+    border-bottom: 1px solid var(--line-faint); padding-bottom: 5px;
+  }
+  #legend .lg { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+  #legend .sw { flex: 0 0 26px; height: 0; border-top-width: 2px; position: relative; top: -3px; }
+  #legend a { color: var(--parchment); text-decoration: none; border-bottom: 1px dotted var(--line-faint); }
+  #legend a:hover { color: var(--gold-bright); border-bottom-color: var(--gold); }
+  #legend .deg { color: var(--line); }
+  #legend p { margin: 10px 0 0; color: var(--line); font-style: italic; font-size: 11.5px; }
+  @media (max-width: 1099px) { #legend { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Starcharts<small>Astrology Clock</small></h1>
+  <div id="dateline">…</div>
+  <div id="hint">drag any planet to travel through time</div>
+  <div id="controls">
+    <input type="datetime-local" id="datepick">
+    <button id="setdate">Set date</button>
+    <button id="now">⌖ Now</button>
+  </div>
+</header>
+<div id="wrap"><svg id="wheel" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<section id="aspects"><h2>Aspects</h2><div id="asplist"></div></section>
+<aside id="legend">
+  <h3>Aspects</h3>
+  <div class="lg"><span class="sw" style="border-top:2px solid var(--parchment)"></span>
+    <span>&#x260C;&#xFE0E; <a href="/aspects/conjunction">Conjunction</a> <span class="deg">0&deg;</span><br>energies fused into one</span></div>
+  <div class="lg"><span class="sw" style="border-top:2px dotted var(--soft)"></span>
+    <span>&#x26B9;&#xFE0E; <a href="/aspects/sextile">Sextile</a> <span class="deg">60&deg;</span><br>opportunity, offered not forced</span></div>
+  <div class="lg"><span class="sw" style="border-top:2px solid var(--hard)"></span>
+    <span>&#x25A1;&#xFE0E; <a href="/aspects/square">Square</a> <span class="deg">90&deg;</span><br>friction that demands action</span></div>
+  <div class="lg"><span class="sw" style="border-top:2px solid var(--soft)"></span>
+    <span>&#x25B3;&#xFE0E; <a href="/aspects/trine">Trine</a> <span class="deg">120&deg;</span><br>harmonious, effortless flow</span></div>
+  <div class="lg"><span class="sw" style="border-top:2px dashed var(--hard)"></span>
+    <span>&#x260D;&#xFE0E; <a href="/aspects/opposition">Opposition</a> <span class="deg">180&deg;</span><br>polarity seeking balance</span></div>
+  <p>The tighter the orb, the brighter the line.</p>
+</aside>
+<div id="tip"></div>
+
+<script type="module">
+import * as A from 'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/+esm';
+
+/* ============ core (ported from @starcharts/astro-core, keep in sync) ============ */
+const PLANETS = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'];
+const SIGNS = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+// Unicode zodiac symbols (U+2648–2653). These codepoints default to EMOJI
+// presentation on Apple platforms (the purple squares), appending U+FE0E,
+// the text variation selector, forces the monochrome text glyph instead.
+// Apply T() to every sign/planet/aspect symbol that touches the DOM.
+const SIGN_GLYPH = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+// U+FE0E (text variation selector) forces monochrome text rendering.
+const T = s => s + '\ufe0e';
+const PLANET_GLYPH = { Sun:'☉', Moon:'☽', Mercury:'☿', Venus:'♀', Mars:'♂', Jupiter:'♃', Saturn:'♄', Uranus:'♅', Neptune:'♆', Pluto:'♇', NorthNode:'☊', SouthNode:'☋' };
+// Some glyphs draw optically smaller at the same font-size, correct per glyph.
+const GLYPH_SIZE = { Sun: 30, Moon: 28, NorthNode: 26, SouthNode: 26 }; // base 24 below
+const NODE_RATE = -0.05295376; // mean node regression, deg/day
+const NODESET = new Set(['NorthNode','SouthNode']);
+const POINTS = [...PLANETS, 'NorthNode', 'SouthNode'];
+const NAME = b => b.replace(/([a-z])([A-Z])/g, '$1 $2');
+const MEAN_MOTION = { Sun:.9856, Moon:13.176, Mercury:1.383, Venus:1.2, Mars:.524, Jupiter:.0831, Saturn:.0334, Uranus:.0117, Neptune:.006, Pluto:.004, NorthNode:-NODE_RATE, SouthNode:-NODE_RATE };
+const ASPECTS = {
+  conjunction: { angle:0,   orb:8, sym:'☌', cls:'soft', color:'var(--parchment)', dash:'' },
+  sextile:     { angle:60,  orb:5, sym:'⚹', cls:'soft', color:'var(--soft)', dash:'2 6' },
+  square:      { angle:90,  orb:7, sym:'□', cls:'hard', color:'var(--hard)', dash:'' },
+  trine:       { angle:120, orb:7, sym:'△', cls:'soft', color:'var(--soft)', dash:'' },
+  opposition:  { angle:180, orb:8, sym:'☍', cls:'hard', color:'var(--hard)', dash:'8 5' },
+};
+// Aspect pages live at /aspects/{a}-{type}-{b} in the web app; the wheel,
+// tooltips, and the list below all link there, internal links from the
+// most-engaged page on the site are the SEO flywheel (see tasks/d1).
+const kebab = s => s.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+const slug = a => `/aspects/${kebab(a.a.body)}-${a.type}-${kebab(a.b.body)}`;
+const planetPage = b => `/planets/${kebab(b)}`;
+const signPage = i => `/signs/${SIGNS[i].toLowerCase()}`;
+// element / modality / traditional ruler / approx. Sun transit dates
+const SIGN_INFO = [
+  ['Fire','Cardinal','Mars','Mar 21 – Apr 19'],
+  ['Earth','Fixed','Venus','Apr 20 – May 20'],
+  ['Air','Mutable','Mercury','May 21 – Jun 20'],
+  ['Water','Cardinal','the Moon','Jun 21 – Jul 22'],
+  ['Fire','Fixed','the Sun','Jul 23 – Aug 22'],
+  ['Earth','Mutable','Mercury','Aug 23 – Sep 22'],
+  ['Air','Cardinal','Venus','Sep 23 – Oct 22'],
+  ['Water','Fixed','Mars','Oct 23 – Nov 21'],
+  ['Fire','Mutable','Jupiter','Nov 22 – Dec 21'],
+  ['Earth','Cardinal','Saturn','Dec 22 – Jan 19'],
+  ['Air','Fixed','Saturn','Jan 20 – Feb 18'],
+  ['Water','Mutable','Jupiter','Feb 19 – Mar 20'],
+];
+// Each aspect row gets UNIQUE teaser text: archetype of A x template x archetype of B.
+const ARCHETYPE = {
+  Sun: 'identity and vitality', Moon: 'instinct and feeling', Mercury: 'mind and message',
+  Venus: 'attraction and values', Mars: 'drive and desire', Jupiter: 'expansion and faith',
+  Saturn: 'structure and limits', Uranus: 'disruption and awakening', Neptune: 'dreams and dissolution',
+  Pluto: 'power and transformation', NorthNode: 'the path being learned', SouthNode: 'the familiar past',
+};
+const PAIR_TEXT = {
+  conjunction: (a, b) => `${a} merges with ${b}, and the two act as one force`,
+  sextile: (a, b) => `${a} finds an easy opening toward ${b}`,
+  square: (a, b) => `${a} grinds against ${b}, demanding action`,
+  trine: (a, b) => `${a} flows effortlessly with ${b}`,
+  opposition: (a, b) => `${a} confronts ${b} across the wheel, seeking balance`,
+};
+const pairText = a => {
+  const t = PAIR_TEXT[a.type](ARCHETYPE[a.a.body], ARCHETYPE[a.b.body]);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+const MEANING_LONG = {
+  conjunction: 'The two points occupy the same degree of the zodiac, blending their natures into a single force. Traditional astrology reads this as intensity: neither planet can act without the other.',
+  sextile: 'Sixty degrees apart, in compatible elements. An opening that rewards initiative; traditionally the aspect of opportunity offered but not imposed.',
+  square: 'Ninety degrees of friction between incompatible modes. The classical aspect of crisis and growth: energy that demands resolution through action.',
+  trine: 'One hundred twenty degrees, same element. Effortless mutual support: talent so natural it can be squandered. The great harmonizing aspect.',
+  opposition: 'Face to face across the wheel. Projection, partnership, and the search for balance between two poles that each hold half the truth.',
+};
+const MEANING = {
+  conjunction: 'fused energies, acting as one',
+  sextile: 'easy opportunity, offered not forced',
+  square: 'friction and tension that demand action',
+  trine: 'harmonious flow, talents reinforcing each other',
+  opposition: 'polarity, a balance to be struck across a divide',
+};
+
+const DAY = 86400000;
+const norm360 = d => ((d % 360) + 360) % 360;
+const wrapDiff = d => { const x = norm360(d); return x > 180 ? x - 360 : x; };
+const sep = (a, b) => Math.abs(wrapDiff(a - b));
+
+function meanNode(date) {
+  const d = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / DAY;
+  return norm360(125.04452 + NODE_RATE * d);
+}
+function longitudeAt(planet, date) {
+  if (planet === 'NorthNode') return meanNode(date);
+  if (planet === 'SouthNode') return norm360(meanNode(date) + 180);
+  if (planet === 'Moon') return norm360(A.EclipticGeoMoon(date).lon);
+  return norm360(A.Ecliptic(A.GeoVector(A.Body[planet], date, true)).elon);
+}
+function speedAt(planet, date) {
+  const h = DAY / 2;
+  return wrapDiff(longitudeAt(planet, new Date(date.getTime() + h)) - longitudeAt(planet, new Date(date.getTime() - h)));
+}
+function chartAt(date) {
+  return POINTS.map(p => {
+    const lon = longitudeAt(p, date);
+    const node = NODESET.has(p);
+    const speed = node ? NODE_RATE : (p === 'Sun' || p === 'Moon') ? MEAN_MOTION[p] : speedAt(p, date);
+    // Nodes always regress; the ℞ badge would be noise, so they go unflagged.
+    return { body: p, lon, signIndex: Math.floor(lon / 30), degreeInSign: lon % 30, retrograde: !node && speed < 0, speed };
+  });
+}
+function detectAspects(pos) {
+  const out = [];
+  for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) {
+    if (NODESET.has(pos[i].body) && NODESET.has(pos[j].body)) continue; // NN–SN: opposite by construction
+    const s = sep(pos[i].lon, pos[j].lon);
+    let best = null;
+    for (const [type, def] of Object.entries(ASPECTS)) {
+      const orb = Math.abs(s - def.angle);
+      if (orb <= def.orb && (!best || orb < best.orb)) best = { a: pos[i], b: pos[j], type, orb };
+    }
+    if (best) out.push(best);
+  }
+  return out.sort((x, y) => x.orb - y.orb);
+}
+function newtonSolve(planet, targetLon, t0) {
+  let t = t0;
+  const meanRate = MEAN_MOTION[planet] / DAY;
+  for (let i = 0; i < 25; i++) {
+    const lon = longitudeAt(planet, new Date(t));
+    const err = wrapDiff(targetLon - lon);
+    if (Math.abs(err) < 1e-4) return t;
+    const probe = Math.min(DAY / 4, Math.abs(err) / meanRate / 8 + 60000);
+    let rate = wrapDiff(longitudeAt(planet, new Date(t + probe)) - lon) / probe;
+    if (Math.abs(rate) < meanRate / 50) rate = meanRate * Math.sign(rate || 1);
+    let step = err / rate;
+    const maxStep = Math.abs(err) / (meanRate / 2) + DAY;
+    if (Math.abs(step) > maxStep) step = Math.sign(step) * maxStep;
+    t += step;
+  }
+  return Math.abs(wrapDiff(targetLon - longitudeAt(planet, new Date(t)))) < 1e-3 ? t : null;
+}
+function bisect(planet, targetLon, lo, hi) {
+  let flo = wrapDiff(longitudeAt(planet, new Date(lo)) - targetLon);
+  for (let i = 0; i < 60 && hi - lo > 500; i++) {
+    const mid = (lo + hi) / 2;
+    const fmid = wrapDiff(longitudeAt(planet, new Date(mid)) - targetLon);
+    if (Math.abs(fmid) < 1e-5) return mid;
+    if ((flo < 0) === (fmid < 0)) { lo = mid; flo = fmid; } else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+function bracketedSolve(planet, targetLon, t0, dir) {
+  const span = Math.min((360 / MEAN_MOTION[planet]) * DAY, 500 * DAY);
+  const N = 256, step = (2 * span) / N;
+  let prevT = t0 - span, prevF = wrapDiff(longitudeAt(planet, new Date(prevT)) - targetLon);
+  const brackets = [];
+  for (let i = 1; i <= N; i++) {
+    const t = t0 - span + i * step;
+    const f = wrapDiff(longitudeAt(planet, new Date(t)) - targetLon);
+    if ((prevF < 0) !== (f < 0) && Math.abs(f - prevF) < 180) brackets.push({ lo: prevT, hi: t, mid: (prevT + t) / 2 });
+    prevT = t; prevF = f;
+  }
+  if (!brackets.length) return null;
+  brackets.sort((a, b) =>
+    Math.abs(a.mid - t0) * (dir && Math.sign(a.mid - t0) !== dir ? 4 : 1) -
+    Math.abs(b.mid - t0) * (dir && Math.sign(b.mid - t0) !== dir ? 4 : 1));
+  return bisect(planet, targetLon, brackets[0].lo, brackets[0].hi);
+}
+function dateForLongitude(planet, targetLon, near, dir = 0) {
+  const t0 = near.getTime();
+  let t = newtonSolve(planet, targetLon, t0);
+  if (t !== null && dir !== 0 && Math.sign(t - t0) === -dir) {
+    const alt = bracketedSolve(planet, targetLon, t0, dir);
+    if (alt !== null && Math.sign(alt - t0) === dir) t = alt;
+  }
+  if (t === null) t = bracketedSolve(planet, targetLon, t0, dir);
+  return new Date(t === null ? t0 : t);
+}
+
+/* ============ geometry: Aries 0° at left (9 o'clock), counterclockwise ============ */
+const CX = 400, CY = 400;
+const pt = (lon, r) => {
+  const a = (180 - lon) * Math.PI / 180;
+  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+};
+const lonFromPointer = (x, y) => norm360(180 - Math.atan2(y - CY, x - CX) * 180 / Math.PI);
+
+/* ============ rendering ============ */
+const svg = document.getElementById('wheel');
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  (parent || svg).appendChild(e);
+  return e;
+};
+
+function drawStatic() {
+  const g = el('g', { id: 'static' });
+  // compass-rose rhumb cross, faint
+  for (let i = 0; i < 8; i++) {
+    const [x1, y1] = pt(i * 45, 300);
+    el('line', { x1: CX, y1: CY, x2: x1, y2: y1, stroke: 'var(--line-faint)', 'stroke-width': i % 2 ? .4 : .7, opacity: .5 }, g);
+  }
+  el('circle', { cx: CX, cy: CY, r: 3, fill: 'var(--line-faint)' }, g);
+  // rings: outer double (astrolabe), zodiac band, tick ring
+  for (const [r, w] of [[382, 1.6], [376, .6], [318, 1.1], [308, .6], [246, .5]])
+    el('circle', { cx: CX, cy: CY, r, fill: 'none', stroke: 'var(--line)', 'stroke-width': w }, g);
+  // sign divisions + glyphs
+  for (let s = 0; s < 12; s++) {
+    const [x1, y1] = pt(s * 30, 318), [x2, y2] = pt(s * 30, 376);
+    el('line', { x1, y1, x2, y2, stroke: 'var(--line)', 'stroke-width': 1 }, g);
+    const [gx, gy] = pt(s * 30 + 15, 347);
+    el('text', {
+      x: gx, y: gy, fill: 'var(--gold)', 'font-size': 26, 'text-anchor': 'middle',
+      'dominant-baseline': 'central', opacity: .9,
+      'font-family': "Georgia, 'Apple Symbols', 'Segoe UI Symbol', serif",
+    }, g).textContent = T(SIGN_GLYPH[s]);
+    const hit = el('circle', { cx: gx, cy: gy, r: 24, fill: 'transparent', class: 'sign-hit' }, g);
+    hit.addEventListener('pointerenter', e => {
+      const [elem, mode, ruler, dates] = SIGN_INFO[s];
+      showTipHTML(`<b>${T(SIGN_GLYPH[s])} ${SIGNS[s]}</b>${mode} ${elem}, ruled by ${ruler}.<br>Sun transits ${SIGNS[s]} ${dates}.`, e);
+    });
+    hit.addEventListener('pointermove', moveTip);
+    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('click', () => location.href = signPage(s));
+  }
+  // sextant ticks: 1° fine, 5° medium, 10° bold
+  for (let d = 0; d < 360; d++) {
+    const big = d % 10 === 0, mid = d % 5 === 0;
+    const r1 = 308, r2 = big ? 296 : mid ? 300 : 304;
+    const [x1, y1] = pt(d, r1), [x2, y2] = pt(d, r2);
+    el('line', {
+      x1, y1, x2, y2, stroke: big ? 'var(--line)' : 'var(--line-faint)',
+      'stroke-width': big ? 1 : .5,
+    }, g);
+  }
+}
+
+const dyn = { aspects: null, planets: null };
+function drawChart(chart, aspects) {
+  dyn.aspects?.remove(); dyn.planets?.remove();
+  dyn.aspects = el('g', { id: 'asp' });
+  dyn.planets = el('g', { id: 'pl' });
+
+  for (const a of aspects) {
+    const def = ASPECTS[a.type];
+    const [x1, y1] = pt(a.a.lon, 240), [x2, y2] = pt(a.b.lon, 240);
+    el('line', {
+      x1, y1, x2, y2, stroke: def.color, 'stroke-width': Math.max(.6, 2.2 - a.orb / 4),
+      'stroke-dasharray': def.dash, opacity: .35 + .5 * (1 - a.orb / 8),
+    }, dyn.aspects);
+    // invisible fat twin = generous hover target for the tooltip
+    const hit = el('line', { x1, y1, x2, y2, stroke: 'transparent', 'stroke-width': 14, class: 'asp-hit' }, dyn.aspects);
+    hit.addEventListener('pointerenter', e => showTip(a, e));
+    hit.addEventListener('pointermove', e => moveTip(e));
+    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('click', () => location.href = slug(a));
+  }
+
+  // radial collision nudge for close bodies
+  const sorted = [...chart].sort((a, b) => a.lon - b.lon);
+  const radius = {};
+  for (let i = 0; i < sorted.length; i++) {
+    let r = 272, guard = 0;
+    while (guard++ < 4 && sorted.some((q, j) => j < i && sep(q.lon, sorted[i].lon) < 5.5 && radius[q.body] === r)) r -= 30;
+    radius[sorted[i].body] = r;
+  }
+
+  for (const p of chart) {
+    const r = radius[p.body];
+    const [x, y] = pt(p.lon, r);
+    const grp = el('g', { class: 'glyph-drag', 'data-body': p.body }, dyn.planets);
+    el('circle', { cx: x, cy: y, r: 20, fill: 'transparent' }, grp); // hit target
+    el('line', {
+      x1: pt(p.lon, 246)[0], y1: pt(p.lon, 246)[1], x2: pt(p.lon, 238)[0], y2: pt(p.lon, 238)[1],
+      stroke: 'var(--planet)', 'stroke-width': 1.2,
+    }, grp);
+    el('text', {
+      x, y, fill: dragging === p.body ? 'var(--planet-bright)' : 'var(--planet)',
+      'font-size': GLYPH_SIZE[p.body] ?? 24,
+      'text-anchor': 'middle', 'dominant-baseline': 'central',
+      style: 'text-shadow: 0 0 8px rgba(174,185,196,.4)',
+    }, grp).textContent = T(PLANET_GLYPH[p.body]);
+    if (p.retrograde) el('text', {
+      x: x + 15, y: y + 14, fill: 'var(--line)', 'font-size': 12, 'text-anchor': 'middle',
+    }, grp).textContent = '℞';
+  }
+}
+
+/* ============ state + UI ============ */
+let current = new Date();
+let dragging = null;
+let dragDir = 0; // time-direction hysteresis across drag frames
+
+const fmt = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  timeZone: 'UTC', era: undefined,
+});
+function render() {
+  const chart = chartAt(current);
+  const aspects = detectAspects(chart);
+  drawChart(chart, aspects);
+  document.getElementById('dateline').textContent = fmt.format(current) + ' UTC';
+  document.getElementById('asplist').innerHTML = aspects.map(a => {
+    const def = ASPECTS[a.type];
+    return `<a class="asp ${def.cls}" href="${slug(a)}"><b>${T(PLANET_GLYPH[a.a.body])} ${T(def.sym)} ${T(PLANET_GLYPH[a.b.body])}</b>
+      ${NAME(a.a.body)} ${a.type} ${NAME(a.b.body)} <small>(orb ${a.orb.toFixed(1)}°), ${pairText(a)}</small></a>`;
+  }).join('');
+}
+
+const clampDate = d => new Date(Math.min(Math.max(d.getTime(), Date.UTC(1000, 0, 1)), Date.UTC(3000, 0, 1)));
+
+svg.addEventListener('pointerdown', e => {
+  const grp = e.target.closest('[data-body]');
+  if (!grp) return;
+  dragging = grp.dataset.body;
+  svg.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+let raf = null;
+svg.addEventListener('pointermove', e => {
+  if (!dragging || raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = null;
+    const rect = svg.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * 800 / rect.width;
+    const y = (e.clientY - rect.top) * 800 / rect.height;
+    const targetLon = lonFromPointer(x, y);
+    // continuity: never ask the solver to jump more than 25° in one frame
+    const curLon = longitudeAt(dragging, current);
+    const step = wrapDiff(targetLon - curLon);
+    const bounded = norm360(curLon + Math.max(-25, Math.min(25, step)));
+    const next = clampDate(dateForLongitude(dragging, bounded, current, dragDir));
+    const d = Math.sign(next.getTime() - current.getTime());
+    if (d !== 0) dragDir = d;
+    current = next;
+    render();
+  });
+});
+const endDrag = () => { if (dragging) { dragging = null; dragDir = 0; render(); } };
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+
+document.getElementById('now').onclick = () => { current = new Date(); render(); };
+document.getElementById('setdate').onclick = () => {
+  const v = document.getElementById('datepick').value;
+  if (v) { current = clampDate(new Date(v + 'Z')); render(); }
+};
+
+const tip = document.getElementById('tip');
+function showTipHTML(html, e) {
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  moveTip(e);
+}
+function showTip(a, e) {
+  const def = ASPECTS[a.type];
+  showTipHTML(`<b>${T(PLANET_GLYPH[a.a.body])} ${NAME(a.a.body)} ${a.type} ${NAME(a.b.body)} ${T(PLANET_GLYPH[a.b.body])}</b>
+    ${MEANING_LONG[a.type]}<br><span style="color:var(--line)">orb ${a.orb.toFixed(2)}° · exact at ${def.angle}°</span>`, e);
+}
+function moveTip(e) {
+  const pad = 14;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(e.clientX + pad, innerWidth - w - 8) + 'px';
+  tip.style.top = Math.min(e.clientY + pad, innerHeight - h - 8) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+drawStatic();
+render();
+</script>
+</body>
+</html>
