@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { longitudeAt, separation, ASPECT_TYPES } from '@starcharts/astro-core';
+import { longitudeAt, separation, ASPECT_TYPES, orbFor } from '@starcharts/astro-core';
 import type { AspectType, PointName } from '@starcharts/astro-core';
 import { displayName } from '../lib/content';
 
@@ -36,15 +36,16 @@ export default function LiveAspectStatus({
   }
 
   const def = ASPECT_TYPES[type];
+  const pairOrb = orbFor(type, a, b);
   const sep = separation(longitudeAt(a, now), longitudeAt(b, now));
   const orbNow = Math.abs(sep - def.angle);
-  const inOrb = orbNow <= def.orb;
+  const inOrb = orbNow <= pairOrb;
 
   return (
     <p>
       {displayName(a)} and {displayName(b)} currently stand {sep.toFixed(1)}° apart
       {inOrb
-        ? <>, inside the {def.orb}° orb, so this {type} is <strong>active on the clock right now</strong>.</>
+        ? <>, inside the {pairOrb}° orb, so this {type} is <strong>active on the clock right now</strong>.</>
         : <>, {orbNow.toFixed(1)}° away from an exact {type}.</>}{' '}
       <Link href="/">Watch it move on the live clock</Link>.
     </p>

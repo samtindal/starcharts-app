@@ -1,6 +1,6 @@
-# B1 — Ephemeris Core ✅
+# B1 | Ephemeris Core ✅
 
-**Scope:** `packages/astro-core` — the shared calculation engine.
+**Scope:** `packages/astro-core`, the shared calculation engine.
 
 **Interfaces (stable, other agents depend on these):**
 - `longitudeAt(planet, date)` → tropical geocentric longitude, true ecliptic of date, [0,360)
@@ -11,7 +11,7 @@
 - helpers: `norm360`, `wrapDiff`, `SIGNS`, `PLANETS`, `ASPECT_TYPES`
 
 **Acceptance criteria (all in test/core.test.ts):**
-- Sun longitude = 0/90/180/270 (±0.05°) at Seasons() equinox/solstice instants — proves of-date frame
+- Sun longitude = 0/90/180/270 (±0.05°) at Seasons() equinox/solstice instants, proves of-date frame
 - Moon−Sun separation = 180° (±0.1°) at SearchMoonPhase(180) instant
 - Sun/Moon never flagged retrograde across sampled dates
 - Synthetic aspect-detection cases incl. 0°/360° wraparound

@@ -36,9 +36,15 @@ export default function AspectsIndex() {
           POINTS.slice(i + 1).map((b) =>
             isNode(a) && isNode(b) ? null : (
               <li key={`${a}-${b}`}>
-                <Link href={`/aspects/${aspectSlug(a, 'conjunction', b)}`}>
-                  {displayName(a)} × {displayName(b)}
-                </Link>
+                <span className="muted">{displayName(a)} &amp; {displayName(b)}:</span>{' '}
+                {(Object.keys(ASPECT_TYPES) as AspectType[]).map((t, idx, arr) => (
+                  <span key={t}>
+                    <Link href={`/aspects/${aspectSlug(a, t, b)}`}>
+                      <span className="glyph">{ASPECT_SYMBOL[t]}︎</span> {t}
+                    </Link>
+                    {idx < arr.length - 1 ? ' · ' : ''}
+                  </span>
+                ))}
               </li>
             ),
           ),

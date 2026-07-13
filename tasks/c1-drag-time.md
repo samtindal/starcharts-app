@@ -1,4 +1,4 @@
-# C1 — Drag ↔ Time Interaction
+# C1 | Drag ↔ Time Interaction
 
 **Scope:** Pointer-event drag on planet glyphs → date changes via `dateForLongitude` (astro-core).
 
@@ -9,4 +9,4 @@
 - Date readout always visible; "Now" reset button; clamp navigation to years 1000–3000 CE.
 - Emit analytics events: dragStart/dragEnd (planet, date delta) for E1.
 
-**Validated in prototype/index.html** — port the solver-seeding and angle math, add capture/a11y/perf work.
+**Validated in prototype/index.html**, port the solver-seeding and angle math, add capture/a11y/perf work.

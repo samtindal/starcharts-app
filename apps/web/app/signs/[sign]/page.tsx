@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { SIGNS, chartAt } from '@starcharts/astro-core';
-import { SIGN_GLYPH, SIGN_INFO, signFromSlug, displayName, planetPath, T, PLANET_GLYPH } from '../../../lib/content';
+import { SIGNS, POINTS, chartAt } from '@starcharts/astro-core';
+import { composeSignParagraphs } from '../../../lib/compose';
+import {
+  SIGN_GLYPH, SIGN_INFO, signFromSlug, displayName, planetPath, planetInSignPath, T, PLANET_GLYPH,
+  rulerDisplay, TRADITIONAL_RULER,
+} from '../../../lib/content';
+import Crumbs from '../../../components/Crumbs';
 
 export const revalidate = 3600; // "planets in this sign now" stays fresh
 export function generateStaticParams() {
@@ -16,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ sign: str
   const info = SIGN_INFO[s];
   return {
     title: `${s}: ${info.modality} ${info.element}`,
-    description: `${s}: ${info.keywords}. Ruled by ${info.ruler}, Sun transit ${info.dates}.`,
+    description: `${s}: ${info.keywords}. Ruled by ${rulerDisplay(s)}, Sun transit ${info.dates}.`,
   };
 }
 
@@ -27,16 +32,19 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
   const i = SIGNS.indexOf(s);
   const info = SIGN_INFO[s];
   const residents = chartAt(new Date()).filter((p) => p.sign === s);
+  const paragraphs = composeSignParagraphs(s);
+  const ruler = TRADITIONAL_RULER(s);
 
   return (
     <div className="prose">
+      <Crumbs items={[{ label: 'Signs', href: '/signs' }, { label: s }]} />
       <h1><span className="glyph">{T(SIGN_GLYPH[i])}</span> {s}</h1>
       <p className="lede">{info.keywords[0].toUpperCase() + info.keywords.slice(1)}.</p>
       <p>
-        {s} is the {info.modality.toLowerCase()} {info.element.toLowerCase()} sign, traditionally ruled by{' '}
-        {info.ruler}. The Sun crosses it each year around {info.dates}, the span most people mean when they
-        say they &ldquo;are&rdquo; a {s}. On the <Link href="/">clock</Link> it occupies the{' '}
-        {i * 30}°–{i * 30 + 30}° arc of the gold ring.
+        The Sun crosses {s} each year around {info.dates}, the span most people mean when they say they
+        &ldquo;are&rdquo; a {s}. On the <Link href="/">clock</Link> it occupies the {i * 30}°–{i * 30 + 30}°
+        arc of the gold ring, traditionally ruled by{' '}
+        <Link href={planetPath(ruler)}>{rulerDisplay(s)}</Link>.
       </p>
       <h2>In {s} right now</h2>
       {residents.length === 0 ? (
@@ -51,6 +59,17 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
           ))}
         </tbody></table>
       )}
+      {paragraphs.map((para, idx) => <p key={idx}>{para}</p>)}
+      <h2>The planets in {s}</h2>
+      <ul className="chip-row">
+        {POINTS.map((pt) => (
+          <li key={pt}>
+            <Link href={planetInSignPath(pt, s)}>
+              <span className="glyph">{T(PLANET_GLYPH[pt])}</span> {displayName(pt)} in {s}
+            </Link>
+          </li>
+        ))}
+      </ul>
       <p className="muted">See all <Link href="/signs">twelve signs</Link>, or watch them turn on the <Link href="/">live clock</Link>.</p>
     </div>
   );

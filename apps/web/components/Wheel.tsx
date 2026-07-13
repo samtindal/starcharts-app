@@ -3,13 +3,14 @@
 import { useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import Link from 'next/link';
 import {
-  chartAt, detectAspects, dateForLongitude, longitudeAt, norm360, wrapDiff,
-  SIGNS, type PointName, type Aspect, type BodyPosition, ASPECT_TYPES,
+  chartAt, detectAspects, rankAspects, dateForLongitude, longitudeAt, norm360, wrapDiff,
+  SIGNS, MEAN_MOTION, type PointName, type Aspect, type BodyPosition,
 } from '@starcharts/astro-core';
 import {
   T, PLANET_GLYPH, SIGN_GLYPH, GLYPH_SIZE, ASPECT_SYMBOL, SIGN_INFO,
-  displayName, aspectPath, signPath, pairText, MEANING_LONG, fmtUTC,
+  displayName, aspectPath, signPath, MEANING_LONG, fmtUTC, rulerDisplay,
 } from '../lib/content';
+import { composeAspectTeaser } from '../lib/compose';
 
 const CX = 400, CY = 400;
 const pt = (lon: number, r: number): [number, number] => {
@@ -43,6 +44,12 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
   const date = useMemo(() => new Date(ms), [ms]);
   const chart = useMemo(() => chartAt(date), [date]);
   const aspects = useMemo(() => detectAspects(chart), [chart]);
+  // §9: order the list by importance and mark the strongest few for emphasis.
+  const ranked = useMemo(() => rankAspects(aspects), [aspects]);
+  const topKeys = useMemo(
+    () => new Set(ranked.slice(0, 3).map((a) => `${a.a}-${a.type}-${a.b}`)),
+    [ranked],
+  );
 
   /* ---------- tooltip helpers ---------- */
   const moveTip = (e: PointerEvent) =>
@@ -69,7 +76,7 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
       content: (
         <>
           <b>{T(SIGN_GLYPH[s])} {SIGNS[s]}</b>
-          {info.modality} {info.element}, ruled by {info.ruler}.
+          {info.modality} {info.element}, ruled by {rulerDisplay(SIGNS[s])}.
           <br />Sun transits {SIGNS[s]} {info.dates}.
         </>
       ),
@@ -213,9 +220,10 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
             const [x1, y1] = pt(pa.lon, 240);
             const [x2, y2] = pt(pb.lon, 240);
             const key = `${a.a}-${a.type}-${a.b}`;
+            const top = topKeys.has(key);
             return (
               <g key={key}>
-                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={st.color} strokeWidth={Math.max(0.6, 2.2 - a.orb / 4)} strokeDasharray={st.dash} opacity={0.35 + 0.5 * (1 - a.orb / 8)} />
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={st.color} strokeWidth={Math.max(0.6, 2.2 - a.orb / 4) + (top ? 1 : 0)} strokeDasharray={st.dash} opacity={(top ? 0.6 : 0.35) + 0.5 * (1 - a.orb / 8)} />
                 <line
                   x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={14} className="asp-hit"
                   onPointerEnter={(e) => showAspectTip(a, e)}
@@ -260,16 +268,18 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
         </svg>
       </div>
 
-      {/* aspect table: one link per row, unique teaser per pair (owner rules) */}
+      {/* aspect table: ordered by importance (§9), strongest marked; one link
+          per row, unique teaser per pair (owner rules) */}
       <section className="aspect-list">
-        <h2>Aspects</h2>
-        {aspects.map((a) => {
+        <h2>Aspects <span className="asp-note">strongest first</span></h2>
+        {ranked.map((a) => {
           const st = ASPECT_STYLE[a.type];
+          const key = `${a.a}-${a.type}-${a.b}`;
           return (
-            <Link key={`${a.a}-${a.type}-${a.b}`} href={aspectPath(a)} className={`asp ${st.cls}`}>
+            <Link key={key} href={aspectPath(a)} className={`asp ${st.cls}${topKeys.has(key) ? ' asp-top' : ''}`}>
               <b>{T(PLANET_GLYPH[a.a])} {T(ASPECT_SYMBOL[a.type])} {T(PLANET_GLYPH[a.b])}</b>{' '}
               {displayName(a.a)} {a.type} {displayName(a.b)}{' '}
-              <small>(orb {a.orb.toFixed(1)}°) · {pairText(a.a, a.type, a.b)}</small>
+              <small>(orb {a.orb.toFixed(1)}°) · {composeAspectTeaser(a.a, a.type, a.b)}</small>
             </Link>
           );
         })}
@@ -291,11 +301,9 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
 }
 
 function describeRate(p: PointName): string {
-  const perDay: Record<PointName, number> = {
-    Sun: 0.99, Moon: 13.2, Mercury: 1.4, Venus: 1.2, Mars: 0.52, Jupiter: 0.083,
-    Saturn: 0.033, Uranus: 0.012, Neptune: 0.006, Pluto: 0.004, NorthNode: 0.053, SouthNode: 0.053,
-  };
-  const days = 1 / perDay[p];
+  // MEAN_MOTION is the |deg/day| magnitude for every point (single source of
+  // truth in astro-core); invert it for a rough "1° takes about N" phrase.
+  const days = 1 / MEAN_MOTION[p];
   if (days < 0.15) return `${Math.round(days * 24)} hours`;
   if (days < 45) return `${days < 2 ? days.toFixed(1) : Math.round(days)} day${days >= 2 ? 's' : ''}`;
   if (days < 400) return `${Math.round(days / 30.4)} months`;

@@ -1,4 +1,4 @@
-# Starcharts — Agent Conventions
+# Starcharts | Agent Conventions
 
 The product name is **Starcharts** (working repo: astrology-clock). Use "Starcharts" in all user-facing copy, titles, and metadata.
 
@@ -9,21 +9,21 @@ Read PLAN.md first. Task briefs live in `tasks/<id>-*.md`; claim yours, respect 
 - **Audience: casual astrology consumers.** No houses/house systems in v1 (deferred, PLAN.md P3). Aspects are the focus.
 - **Palette:** signs gold, planets/nodes silver, soft aspects verdigris, hard aspects steel blue. **Never red, pink, purple, orange, or yellow.**
 - **Symbols:** real Unicode glyphs + U+FE0E (never emoji rendering); ☉ needs per-glyph size bump.
-- On the clock page, aspect-table rows link ONLY to aspect pages; planet links live inside content pages only. Planet glyphs on the wheel: draggable, with hover tooltips (position + drag hint) that MUST disappear on drag start — but never clickable.
+- On the clock page, aspect-table rows link ONLY to aspect pages; planet links live inside content pages only. Planet glyphs on the wheel: draggable, with hover tooltips (position + drag hint) that MUST disappear on drag start, but never clickable.
 - Aspect teaser text must be unique per planet pair.
-- **No em dashes (—) in any user-facing copy** (owner rule). Rewrite with commas, colons, or periods. En dashes in numeric ranges (Mar 21 – Apr 19) are fine. Titles use "|" as separator.
+- **No em dashes (—) anywhere** (owner rule). This applies to every file in the repo, not just user-facing copy: internal docs (PLAN.md and the plan tracker, task briefs, strategy docs, this file), code comments, and commit messages included. Rewrite with commas, colons, or periods. En dashes in numeric ranges (Mar 21 – Apr 19) are the only exception and stay as-is. Titles use "|" as separator.
 
 ## Structure
 
-- `packages/astro-core` — pure TS calculation engine. **Zero DOM/framework deps.** Everything (web, MCP, OG images) imports from here. If web and MCP could ever disagree on a number, the code belongs here.
-- `packages/chart-svg` — SVG renderer + theme tokens (PLAN.md §5). Pure functions: `ChartState` in, SVG string/element out.
-- `apps/web` — Next.js App Router + PWA. Wheel = client component; content pages = server components.
-- `apps/mcp` — MCP server, streamable-HTTP transport. Thin wrapper over astro-core.
-- `prototype/` — throwaway spike validating drag↔date. Do not import from it; port learnings into packages.
+- `packages/astro-core`, pure TS calculation engine. **Zero DOM/framework deps.** Everything (web, MCP, OG images) imports from here. If web and MCP could ever disagree on a number, the code belongs here.
+- `packages/chart-svg`, SVG renderer + theme tokens (PLAN.md §5). Pure functions: `ChartState` in, SVG string/element out.
+- `apps/web`, Next.js App Router + PWA. Wheel = client component; content pages = server components.
+- `apps/mcp`, MCP server, streamable-HTTP transport. Thin wrapper over astro-core.
+- `prototype/`, throwaway spike validating drag↔date. Do not import from it; port learnings into packages.
 
 ## Rules
 
-- Ephemeris: `astronomy-engine` only. **Never add Swiss Ephemeris** (swisseph/sweph — AGPL/commercial) even transitively.
+- Ephemeris: `astronomy-engine` only. **Never add Swiss Ephemeris** (swisseph/sweph, AGPL/commercial) even transitively.
 - Single source of truth for chart state = one UTC timestamp (plus natal timestamps in overlay modes). No duplicated derived state.
 - Longitudes: tropical, geocentric, true ecliptic of date, degrees [0, 360). Aries 0 = 0.
 - Angles helper functions (`norm360`, `wrapDiff`) come from astro-core; don't reimplement.

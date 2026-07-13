@@ -7,13 +7,14 @@ export type { PlanetName, NodeName, PointName, SignName, BodyPosition } from './
 export { ASPECT_TYPES, orbFor, aspectStrength, rankAspects, detectAspects, crossAspects } from './aspects.js';
 export type { AspectType, Aspect, StrengthMode } from './aspects.js';
 export { dateForLongitude } from './solver.js';
-export { nextExactAspectDates, signWindows } from './events.js';
-export type { SignWindow } from './events.js';
+export { nextExactAspectDates, lastExactAspectDate, aspectStrengthTimeline, signWindows } from './events.js';
+export type { SignWindow, StrengthSample, StrengthTimeline } from './events.js';
 export { moonPhase, voidOfCourse, VOC_BODIES } from './moon.js';
 export type { MoonPhase, PhaseName, VoidOfCourse } from './moon.js';
 export {
-  VOICES, composeAspectParagraphs, composeAspectTeaser,
-  composePlanetInSignParagraphs, composePlanetInSignTeaser, elementOf, modalityOf,
+  VOICES, SIGN_TRADITION, composeAspectParagraphs, composeAspectTeaser,
+  composePlanetInSignParagraphs, composePlanetInSignTeaser,
+  composeSignParagraphs, composePlanetParagraphs, elementOf, modalityOf,
 } from './interpret.js';
 export type { Voice } from './interpret.js';
 // natal.ts (natalChart, transitAspects, synastry) and houses.ts (ascendantMC,

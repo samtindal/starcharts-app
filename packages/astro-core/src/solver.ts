@@ -42,7 +42,7 @@ function bisect(planet: PointName, targetLon: number, lo: number, hi: number): n
 
 /**
  * Robust fallback: sample a window around t0, collect every sign-change
- * bracket of f(t), pick the one nearest in time — weighted so brackets in
+ * bracket of f(t), pick the one nearest in time, weighted so brackets in
  * `preferDirection` win over slightly-nearer ones behind us (hysteresis
  * keeps a drag from flickering between past and future branches).
  */
@@ -77,7 +77,7 @@ function bracketedSolve(
 
 /**
  * Inverse ephemeris: the Date nearest `near` at which `planet` sits at
- * `targetLon` (PLAN.md §4 — the drag→time solver).
+ * `targetLon` (PLAN.md §4, the drag→time solver).
  *
  * `preferDirection` (+1 future / −1 past / 0 none) biases branch choice when
  * several crossings exist (retrograde loops). Drag callers should pass the

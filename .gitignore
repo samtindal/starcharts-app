@@ -3,6 +3,7 @@ dist/
 .next/
 *.log
 .DS_Store
+*.tsbuildinfo
 
 # Firebase (hardening spec B10, DATA-2 upkeep): local emulator/deploy artifacts
 .firebase/

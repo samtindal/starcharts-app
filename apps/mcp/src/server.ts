@@ -106,7 +106,35 @@ function buildServer(): McpServer {
 }
 
 const app = express();
-app.use(express.json());
+// Cloud Run terminates TLS at a front proxy; trust it so req.ip is the real
+// client (used for rate limiting) rather than the proxy's address.
+app.set('trust proxy', true);
+// Requests are tiny JSON-RPC envelopes; cap the body to reject abuse.
+app.use(express.json({ limit: '32kb' }));
+
+// Minimal in-process, per-IP fixed-window rate limiter. No dependency, and
+// good enough as a basic safeguard for a public read-only service. Limits are
+// per instance (Cloud Run may run several); tune via env if needed.
+const RATE_LIMIT = Number(process.env.RATE_LIMIT ?? 120); // requests per window
+const RATE_WINDOW_MS = Number(process.env.RATE_WINDOW_MS ?? 60_000);
+const buckets = new Map<string, { count: number; reset: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, b] of buckets) if (b.reset <= now) buckets.delete(ip);
+}, RATE_WINDOW_MS).unref(); // don't keep the process alive for cleanup
+app.use((req, res, next) => {
+  if (req.path === '/healthz') return next(); // never rate-limit health checks
+  const now = Date.now();
+  const ip = req.ip ?? 'unknown';
+  let b = buckets.get(ip);
+  if (!b || b.reset <= now) { b = { count: 0, reset: now + RATE_WINDOW_MS }; buckets.set(ip, b); }
+  b.count++;
+  if (b.count > RATE_LIMIT) {
+    res.set('Retry-After', String(Math.ceil((b.reset - now) / 1000)));
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+  next();
+});
 
 // MCP endpoint, stateless streamable HTTP: fresh server+transport per request.
 app.post('/mcp', async (req, res) => {

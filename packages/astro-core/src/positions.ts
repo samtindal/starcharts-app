@@ -1,4 +1,6 @@
-import { Body, GeoVector, Ecliptic, EclipticGeoMoon } from './ephemeris.js';
+import {
+  Body, GeoVector, Ecliptic, EclipticGeoMoon,
+} from './ephemeris.js';
 import { norm360, wrapDiff } from './angles.js';
 
 export const PLANETS = [
@@ -46,7 +48,7 @@ const DAY_MS = 86_400_000;
 
 /**
  * Mean lunar node (Meeus). The "true" (osculating) node wobbles up to
- * ~1.75° around this; astrology accepts either — we use MEAN and say so.
+ * ~1.75° around this; astrology accepts either, we use MEAN and say so.
  * Referred to the mean equinox of date, which is what the tropical
  * zodiac wants. (TT−UTC ≈ 1 min ⇒ error ~4e-5°, ignorable.)
  */
@@ -55,14 +57,22 @@ function meanNodeLongitude(date: Date): number {
   return norm360(125.04452 + NODE_RATE * d);
 }
 
+/** North or South lunar node longitude. Mean node only (owner decision
+ * 2026-07-12: the true/osculating option was dropped). The two nodes are
+ * exactly opposite by construction. */
+function nodeLongitude(point: 'NorthNode' | 'SouthNode', date: Date): number {
+  const north = meanNodeLongitude(date);
+  return point === 'NorthNode' ? north : norm360(north + 180);
+}
+
 /**
  * Tropical geocentric ecliptic longitude (true ecliptic of date), degrees [0,360).
  * astronomy-engine's Ecliptic() converts a J2000 equatorial vector to true
- * ecliptic of date, which is the frame astrology uses.
+ * ecliptic of date, which is the frame astrology uses. Lunar nodes use the
+ * Mean node.
  */
 export function longitudeAt(point: PointName, date: Date): number {
-  if (point === 'NorthNode') return meanNodeLongitude(date);
-  if (point === 'SouthNode') return norm360(meanNodeLongitude(date) + 180);
+  if (point === 'NorthNode' || point === 'SouthNode') return nodeLongitude(point, date);
   if (point === 'Moon') return norm360(EclipticGeoMoon(date).lon);
   const vec = GeoVector(BODY[point], date, true /* correct for aberration */);
   return norm360(Ecliptic(vec).elon);
@@ -78,7 +88,7 @@ export function dailyMotion(point: PointName, date: Date): number {
 
 export function isRetrograde(point: PointName, date: Date): boolean {
   // Sun/Moon never retrograde; nodes are ALWAYS regressing, so flagging
-  // them would be noise — chart convention leaves nodes unbadged.
+  // them would be noise, chart convention leaves nodes unbadged.
   if (point === 'Sun' || point === 'Moon' || isNode(point)) return false;
   return dailyMotion(point, date) < 0;
 }
@@ -99,18 +109,22 @@ export interface BodyPosition {
 export function positionAt(point: PointName, date: Date): BodyPosition {
   const lon = longitudeAt(point, date);
   const signIndex = Math.floor(lon / 30) % 12;
-  const speed = isNode(point)
-    ? NODE_RATE
-    : point === 'Sun' || point === 'Moon'
-      ? MEAN_MOTION[point]
-      : dailyMotion(point, date);
+  // Every body (incl. Sun/Moon) gets its TRUE instantaneous rate via central
+  // difference: the Moon swings 11.8-15.3 deg/day and the Sun 0.95-1.02, so a
+  // constant mean would make the applying/separating flag wrong near the
+  // extremes. The two nodes keep the analytic NODE_RATE (their central-diff
+  // rate is dominated by numerical noise at ~0.05 deg/day). MEAN_MOTION stays
+  // the solver's step-scaling constant only.
+  const isLuminary = point === 'Sun' || point === 'Moon';
+  const speed = isNode(point) ? NODE_RATE : dailyMotion(point, date);
   return {
     body: point,
     lon,
     sign: SIGNS[signIndex],
     signIndex,
     degreeInSign: lon - signIndex * 30,
-    retrograde: isRetrograde(point, date) && speed < 0,
+    // Sun/Moon never retrograde; nodes are unbadged by convention.
+    retrograde: !isLuminary && !isNode(point) && speed < 0,
     speed,
   };
 }

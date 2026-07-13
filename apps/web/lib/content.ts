@@ -1,5 +1,12 @@
-import { POINTS, SIGNS, ASPECT_TYPES, longitudeAt, separation } from '@starcharts/astro-core';
+import { POINTS, SIGNS, ASPECT_TYPES, SIGN_TRADITION } from '@starcharts/astro-core';
 import type { PointName, SignName, AspectType, Aspect } from '@starcharts/astro-core';
+
+/**
+ * Next dates when a pair reaches an exact aspect angle. The calculation lives
+ * in astro-core (single source of truth); re-exported here under the name the
+ * pages already import.
+ */
+export { nextExactAspectDates as nextExactDates } from '@starcharts/astro-core';
 
 /** U+FE0E forces monochrome text glyphs (Apple otherwise renders emoji). */
 export const T = (s: string) => s + '︎';
@@ -30,21 +37,52 @@ export const aspectPath = (asp: Aspect) => `/aspects/${aspectSlug(asp.a, asp.typ
 export const planetPath = (p: PointName) => `/planets/${kebab(p)}`;
 export const signPath = (s: SignName | number) =>
   `/signs/${(typeof s === 'number' ? SIGNS[s] : s).toLowerCase()}`;
+/** Planet-in-sign page, e.g. /planets/venus/leo (D3). */
+export const planetInSignPath = (p: PointName, s: SignName | number) =>
+  `${planetPath(p)}/${(typeof s === 'number' ? SIGNS[s] : s).toLowerCase()}`;
 
-/** element / modality / traditional ruler / approx Sun-transit dates / keywords */
-export const SIGN_INFO: Record<SignName, { element: string; modality: string; ruler: string; dates: string; keywords: string }> = {
-  Aries: { element: 'Fire', modality: 'Cardinal', ruler: 'Mars', dates: 'March 21 – April 19', keywords: 'initiative, courage, the spark that starts things' },
-  Taurus: { element: 'Earth', modality: 'Fixed', ruler: 'Venus', dates: 'April 20 – May 20', keywords: 'steadiness, pleasure, what endures' },
-  Gemini: { element: 'Air', modality: 'Mutable', ruler: 'Mercury', dates: 'May 21 – June 20', keywords: 'curiosity, exchange, the two-sided mind' },
-  Cancer: { element: 'Water', modality: 'Cardinal', ruler: 'the Moon', dates: 'June 21 – July 22', keywords: 'protection, memory, the tides of feeling' },
-  Leo: { element: 'Fire', modality: 'Fixed', ruler: 'the Sun', dates: 'July 23 – August 22', keywords: 'radiance, performance, the generous heart' },
-  Virgo: { element: 'Earth', modality: 'Mutable', ruler: 'Mercury', dates: 'August 23 – September 22', keywords: 'craft, discernment, useful service' },
-  Libra: { element: 'Air', modality: 'Cardinal', ruler: 'Venus', dates: 'September 23 – October 22', keywords: 'balance, partnership, the art of the fair' },
-  Scorpio: { element: 'Water', modality: 'Fixed', ruler: 'Mars', dates: 'October 23 – November 21', keywords: 'intensity, depth, what lies beneath' },
-  Sagittarius: { element: 'Fire', modality: 'Mutable', ruler: 'Jupiter', dates: 'November 22 – December 21', keywords: 'horizon-seeking, faith, the long arrow' },
-  Capricorn: { element: 'Earth', modality: 'Cardinal', ruler: 'Saturn', dates: 'December 22 – January 19', keywords: 'ambition, mastery, the mountain path' },
-  Aquarius: { element: 'Air', modality: 'Fixed', ruler: 'Saturn', dates: 'January 20 – February 18', keywords: 'invention, the collective, the view from outside' },
-  Pisces: { element: 'Water', modality: 'Mutable', ruler: 'Jupiter', dates: 'February 19 – March 20', keywords: 'dissolution, compassion, the boundless sea' },
+/** element / modality / approx Sun-transit dates / keywords.
+ * (Ruler now derives from astro-core's SIGN_TRADITION via TRADITIONAL_RULER
+ * below, single source with the composed sign copy.) */
+export const SIGN_INFO: Record<SignName, { element: string; modality: string; dates: string; keywords: string }> = {
+  Aries: { element: 'Fire', modality: 'Cardinal', dates: 'March 21 – April 19', keywords: 'initiative, courage, the spark that starts things' },
+  Taurus: { element: 'Earth', modality: 'Fixed', dates: 'April 20 – May 20', keywords: 'steadiness, pleasure, what endures' },
+  Gemini: { element: 'Air', modality: 'Mutable', dates: 'May 21 – June 20', keywords: 'curiosity, exchange, the two-sided mind' },
+  Cancer: { element: 'Water', modality: 'Cardinal', dates: 'June 21 – July 22', keywords: 'protection, memory, the tides of feeling' },
+  Leo: { element: 'Fire', modality: 'Fixed', dates: 'July 23 – August 22', keywords: 'radiance, performance, the generous heart' },
+  Virgo: { element: 'Earth', modality: 'Mutable', dates: 'August 23 – September 22', keywords: 'craft, discernment, useful service' },
+  Libra: { element: 'Air', modality: 'Cardinal', dates: 'September 23 – October 22', keywords: 'balance, partnership, the art of the fair' },
+  Scorpio: { element: 'Water', modality: 'Fixed', dates: 'October 23 – November 21', keywords: 'intensity, depth, what lies beneath' },
+  Sagittarius: { element: 'Fire', modality: 'Mutable', dates: 'November 22 – December 21', keywords: 'horizon-seeking, faith, the long arrow' },
+  Capricorn: { element: 'Earth', modality: 'Cardinal', dates: 'December 22 – January 19', keywords: 'ambition, mastery, the mountain path' },
+  Aquarius: { element: 'Air', modality: 'Fixed', dates: 'January 20 – February 18', keywords: 'invention, the collective, the view from outside' },
+  Pisces: { element: 'Water', modality: 'Mutable', dates: 'February 19 – March 20', keywords: 'dissolution, compassion, the boundless sea' },
+};
+
+/** Traditional ruler as a linkable point (from astro-core, single source). */
+export const TRADITIONAL_RULER = (s: SignName): PointName => SIGN_TRADITION[s].ruler;
+/** Display form: luminaries take the article ("the Moon"), planets don't. */
+export const rulerDisplay = (s: SignName): string => {
+  const p = TRADITIONAL_RULER(s);
+  return p === 'Sun' || p === 'Moon' ? `the ${p}` : p;
+};
+
+/** Traditional dignities: rulership(s) and exaltation, linked on planet pages.
+ * Outer planets carry MODERN sign associations (flagged), and the nodes none:
+ * the tradition does not assign dignities to points (D5 honesty rule). */
+export const DIGNITIES: Record<PointName, { rules: SignName[]; exaltation: SignName | null; modern?: boolean }> = {
+  Sun: { rules: ['Leo'], exaltation: 'Aries' },
+  Moon: { rules: ['Cancer'], exaltation: 'Taurus' },
+  Mercury: { rules: ['Gemini', 'Virgo'], exaltation: 'Virgo' },
+  Venus: { rules: ['Taurus', 'Libra'], exaltation: 'Pisces' },
+  Mars: { rules: ['Aries', 'Scorpio'], exaltation: 'Capricorn' },
+  Jupiter: { rules: ['Sagittarius', 'Pisces'], exaltation: 'Cancer' },
+  Saturn: { rules: ['Capricorn', 'Aquarius'], exaltation: 'Libra' },
+  Uranus: { rules: ['Aquarius'], exaltation: null, modern: true },
+  Neptune: { rules: ['Pisces'], exaltation: null, modern: true },
+  Pluto: { rules: ['Scorpio'], exaltation: null, modern: true },
+  NorthNode: { rules: [], exaltation: null },
+  SouthNode: { rules: [], exaltation: null },
 };
 
 export const ARCHETYPE: Record<PointName, string> = {
@@ -85,18 +123,34 @@ export const MEANING_LONG: Record<AspectType, string> = {
   opposition: 'Face to face across the wheel. Projection, partnership, and the search for balance between two poles that each hold half the truth.',
 };
 
-const PAIR_TEMPLATE: Record<AspectType, (a: string, b: string) => string> = {
-  conjunction: (a, b) => `${a} merges with ${b}, and the two act as one force`,
-  sextile: (a, b) => `${a} finds an easy opening toward ${b}`,
-  square: (a, b) => `${a} grinds against ${b}, demanding action`,
-  trine: (a, b) => `${a} flows effortlessly with ${b}`,
-  opposition: (a, b) => `${a} confronts ${b} across the wheel, seeking balance`,
-};
+/** POINTS-ordered (canonical) slug for a pair regardless of argument order. */
+export function canonicalAspectSlug(a: PointName, type: AspectType, b: PointName): string {
+  const [x, y] = POINTS.indexOf(a) <= POINTS.indexOf(b) ? [a, b] : [b, a];
+  return aspectSlug(x, type, y);
+}
 
-/** Unique teaser per pair+type (owner requirement, never a generic per-type blurb). */
-export function pairText(a: PointName, type: AspectType, b: PointName): string {
-  const t = PAIR_TEMPLATE[type](ARCHETYPE[a], ARCHETYPE[b]);
-  return t.charAt(0).toUpperCase() + t.slice(1);
+/**
+ * Related same-type pairs sharing one endpoint with (a, b): the outbound half
+ * of the aspect pages' internal-link rail. Deterministic per page (a rotation
+ * seeded by the pair's POINTS indices), canonical order, node-node excluded.
+ */
+export function relatedAspects(a: PointName, type: AspectType, b: PointName, count = 3): ParsedAspectSlug[] {
+  const isNode = (p: PointName) => p === 'NorthNode' || p === 'SouthNode';
+  const seen = new Set<string>([canonicalAspectSlug(a, type, b)]);
+  const out: ParsedAspectSlug[] = [];
+  for (const [keep, swap] of [[a, b], [b, a]] as [PointName, PointName][]) {
+    for (const x of POINTS) {
+      if (x === keep || x === swap) continue;
+      if (isNode(keep) && isNode(x)) continue;
+      const slug = canonicalAspectSlug(keep, type, x);
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      const [p, q] = POINTS.indexOf(keep) <= POINTS.indexOf(x) ? [keep, x] : [x, keep];
+      out.push({ a: p, type, b: q });
+    }
+  }
+  const rot = (POINTS.indexOf(a) + POINTS.indexOf(b)) % out.length;
+  return [...out.slice(rot), ...out.slice(0, rot)].slice(0, count);
 }
 
 /** All canonical aspect-page params: POINTS-ordered pairs × 5 types, minus NN–SN. */
@@ -125,37 +179,6 @@ export function parseAspectSlug(slug: string): ParsedAspectSlug | null {
     }
   }
   return null;
-}
-
-/**
- * Next dates when the pair reaches the exact aspect angle: coarse scan
- * (6 h steps, fine enough even for the Moon) + bisection refinement.
- */
-export function nextExactDates(
-  a: PointName, type: AspectType, b: PointName,
-  from: Date, spanDays = 730, maxHits = 4,
-): Date[] {
-  const angle = ASPECT_TYPES[type].angle;
-  const stepMs = 6 * 3600 * 1000;
-  const f = (t: number) =>
-    separation(longitudeAt(a, new Date(t)), longitudeAt(b, new Date(t))) - angle;
-  const hits: Date[] = [];
-  let prevT = from.getTime();
-  let prevF = f(prevT);
-  const end = prevT + spanDays * 86_400_000;
-  for (let t = prevT + stepMs; t <= end && hits.length < maxHits; t += stepMs) {
-    const ft = f(t);
-    if ((prevF < 0) !== (ft < 0)) {
-      let lo = prevT, hi = t;
-      for (let i = 0; i < 40; i++) {
-        const mid = (lo + hi) / 2;
-        if ((f(lo) < 0) === (f(mid) < 0)) lo = mid; else hi = mid;
-      }
-      hits.push(new Date((lo + hi) / 2));
-    }
-    prevT = t; prevF = ft;
-  }
-  return hits;
 }
 
 export const fmtUTC = (d: Date) =>

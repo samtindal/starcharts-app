@@ -53,6 +53,28 @@ main { max-width: 980px; margin: 0 auto; padding: 8px 20px 48px; }
 .badge-soft { color: var(--soft); }
 .badge-hard { color: var(--hard); }
 
+.crumbs { font-size: 12px; letter-spacing: .08em; color: var(--line); text-transform: uppercase; margin-bottom: 2px; }
+.crumbs a { color: var(--line); border-bottom: 1px dotted var(--line-faint); }
+.crumbs a:hover { color: var(--gold); }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px 8px; padding: 0; list-style: none; }
+.chip-row li a {
+  display: inline-block; border: 1px solid var(--line-faint); border-radius: 3px;
+  padding: 4px 9px; font-size: 13px; color: var(--parchment);
+}
+.chip-row li a:hover { border-color: var(--gold); color: var(--gold-bright); }
+.chip-row .glyph { color: var(--gold); }
+
+/* ---- moon panel (sky-today, D4) ---- */
+.moon-panel {
+  display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;
+  border: 1px solid var(--line-faint); border-radius: 6px; padding: 18px 20px; margin: 14px 0;
+  background: rgba(13, 27, 46, .5);
+}
+.moon-figure { flex: 0 0 auto; }
+.moon-facts { flex: 1 1 260px; min-width: 240px; }
+.moon-facts .voc strong { color: var(--gold-bright); font-weight: normal; }
+
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 0; list-style: none; }
 .card-grid a {
   display: block; border: 1px solid var(--line-faint); border-radius: 4px;
@@ -96,6 +118,9 @@ a.asp.hard b { color: #9FC0DE; }
 a.asp small { color: var(--line); }
 a.asp:hover { background: rgba(201, 162, 39, .07); color: inherit; }
 a.asp:hover small::after { content: '  read more \2192'; color: var(--gold); }
+.aspect-list .asp-note { font-size: 10px; letter-spacing: .15em; color: var(--line); text-transform: none; }
+a.asp.asp-top { border-left: 2px solid var(--gold); padding-left: 8px; margin-left: -10px; }
+a.asp.asp-top b { color: var(--gold-bright); }
 
 .tip {
   position: fixed; max-width: 260px; z-index: 10; pointer-events: none;

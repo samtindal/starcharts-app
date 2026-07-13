@@ -5,12 +5,6 @@ export const ATTRIBUTION = 'Starcharts (https://starcharts.me), the draggable as
 /** "NorthNode" → "North Node" for human-readable summaries. */
 const displayName = (b: string) => b.replace(/([a-z])([A-Z])/g, '$1 $2');
 
-const ordinal = (n: number) => {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
-};
-
 export function describePositions(positions: BodyPosition[]): string {
   return positions
     .map((p) => {
