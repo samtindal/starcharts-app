@@ -1,0 +1,29 @@
+# Firebase App Hosting config for the Starcharts web app.
+# The backend's root directory is set to apps/web when the backend is created
+# in the Firebase console (this is a monorepo). App Hosting auto-detects Next.js,
+# runs `next build`, and serves SSR/ISR on managed Cloud Run behind its CDN.
+
+runConfig:
+  minInstances: 0 # scale to zero: ~$0 when idle, matches the old Cloud Run posture
+  maxInstances: 100
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # Origin-fence secret (hardening spec B6, NET-1). Shared with the Cloudflare
+  # Transform Rule that injects the x-origin-fence header. RUNTIME only: read by
+  # apps/web/middleware.ts at request time, never built into the client bundle,
+  # never NEXT_PUBLIC. Provision the Secret Manager secret `origin-fence-secret`
+  # and grant the App Hosting runtime service account access (runbook step 7),
+  # then set the same value in the Cloudflare Transform Rule.
+  - variable: ORIGIN_FENCE_SECRET
+    secret: origin-fence-secret
+    availability: [RUNTIME]
+
+# Future non-secret values (E1 ads/analytics) go inline under env: with
+# availability [BUILD, RUNTIME]; secrets always go through Secret Manager via
+# `secret:`, never inline (see runbook).
+#   - variable: NEXT_PUBLIC_ADSENSE_CLIENT
+#     value: ca-pub-xxxxxxxx
+#     availability: [BUILD, RUNTIME]

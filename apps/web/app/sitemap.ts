@@ -21,5 +21,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...POINTS.map((p) => ({
       url: `${base}/planets/${kebab(p)}`, changeFrequency: 'daily' as const, priority: 0.7,
     })),
+    // Planet-in-sign pages (D3): 12 points x 12 signs = 144.
+    ...POINTS.flatMap((p) =>
+      SIGNS.map((s) => ({
+        url: `${base}/planets/${kebab(p)}/${s.toLowerCase()}`,
+        changeFrequency: 'weekly' as const,
+        priority: 0.55,
+      })),
+    ),
+    // Sky-today Moon surface (D4).
+    { url: `${base}/sky`, changeFrequency: 'hourly', priority: 0.7 },
+    { url: `${base}/moon`, changeFrequency: 'hourly', priority: 0.7 },
   ];
 }

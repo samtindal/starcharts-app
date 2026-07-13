@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { Seasons, SearchMoonPhase, type AstroTime } from '../src/ephemeris.js';
 import {
   longitudeAt, chartAt, isRetrograde, detectAspects, dateForLongitude,
-  norm360, wrapDiff, separation, PLANETS,
-  crossAspects, natalChart, transitAspects, synastry,
+  norm360, wrapDiff, separation, PLANETS, ASPECT_TYPES, nextExactAspectDates,
+  crossAspects,
 } from '../src/index.js';
+// natal.ts is engine-internal (not re-exported from index); import it directly.
+import { natalChart, transitAspects, synastry } from '../src/natal.js';
+import type { AspectType } from '../src/index.js';
 import type { BodyPosition } from '../src/index.js';
 
 function fakePos(body: string, lon: number, speed = 1): BodyPosition {
@@ -136,7 +139,7 @@ describe('aspect detection (synthetic)', () => {
     expect(aspects[0].orb).toBeCloseTo(0);
   });
   it('respects orb limits', () => {
-    // 60° aspect with 6° orb — outside sextile's 5° limit
+    // 60° aspect with 6° orb, outside sextile's 5° limit
     const aspects = detectAspects([fakePos('Sun', 0), fakePos('Moon', 66)]);
     expect(aspects).toHaveLength(0);
   });
@@ -186,6 +189,50 @@ describe('natal / transits / synastry', () => {
     // Moving away: separating.
     const hits2 = crossAspects([fakePos('Mars', 93, 1)], [fakePos('Sun', 0, 1)], { staticB: true });
     expect(hits2[0].applying).toBe(false);
+  });
+});
+
+describe('next exact aspect dates', () => {
+  const from = new Date('2026-07-07T00:00:00Z');
+  const ALL = Object.keys(ASPECT_TYPES) as AspectType[];
+
+  it('every aspect type resolves, including the conjunction/opposition blind spot', () => {
+    // Regression: separation() folds into [0,180], so `sep - 0` never goes
+    // negative and `sep - 180` never goes positive. The old sign-change scan
+    // returned ZERO dates for conjunction and opposition. Guard all five.
+    for (const type of ALL) {
+      const dates = nextExactAspectDates('Sun', type, 'Mars', from, 1400, 4);
+      expect(dates.length, `${type} should have upcoming dates`).toBeGreaterThan(0);
+      for (const d of dates) {
+        const sep = separation(longitudeAt('Sun', d), longitudeAt('Mars', d));
+        expect(sep, `${type} at ${d.toISOString()}`).toBeCloseTo(ASPECT_TYPES[type].angle, 1);
+      }
+    }
+  });
+
+  it('specifically finds Sun–Mars conjunctions and oppositions', () => {
+    expect(nextExactAspectDates('Sun', 'conjunction', 'Mars', from, 1400, 4).length).toBeGreaterThan(0);
+    expect(nextExactAspectDates('Sun', 'opposition', 'Mars', from, 1400, 4).length).toBeGreaterThan(0);
+  });
+
+  it('returns dates ascending and inside the span', () => {
+    const span = 120;
+    const dates = nextExactAspectDates('Moon', 'conjunction', 'Sun', from, span, 4);
+    expect(dates.length).toBeGreaterThan(1); // new moon is ~monthly
+    const end = from.getTime() + span * 86_400_000;
+    for (let i = 0; i < dates.length; i++) {
+      expect(dates[i].getTime()).toBeGreaterThanOrEqual(from.getTime());
+      expect(dates[i].getTime()).toBeLessThanOrEqual(end);
+      if (i > 0) expect(dates[i].getTime()).toBeGreaterThan(dates[i - 1].getTime());
+    }
+  });
+
+  it('honours maxHits and does not emit near-duplicate instants', () => {
+    const dates = nextExactAspectDates('Moon', 'square', 'Sun', from, 365, 3);
+    expect(dates.length).toBeLessThanOrEqual(3);
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i].getTime() - dates[i - 1].getTime()).toBeGreaterThan(6 * 3600 * 1000);
+    }
   });
 });
 

@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <small>Astrology Clock</small>
           </Link>
           <nav className="site-nav">
+            <Link href="/sky">Sky today</Link>
             <Link href="/aspects">Aspects</Link>
             <Link href="/signs">Signs</Link>
             <Link href="/planets">Planets</Link>
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="site-footer">
           <div>Starcharts, an astrology clock. Positions computed with a real astronomical ephemeris (tropical zodiac, geocentric).</div>
           <nav>
+            <Link href="/sky">The sky today</Link>
             <Link href="/aspects">Aspect meanings</Link>
             <Link href="/signs">The twelve signs</Link>
             <Link href="/planets">Planets &amp; points</Link>
