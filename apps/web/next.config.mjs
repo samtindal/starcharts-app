@@ -32,6 +32,10 @@ const nextConfig = {
     ];
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  // /moon merged into /planets/moon; the standalone route was briefly live.
+  async redirects() {
+    return [{ source: '/moon', destination: '/planets/moon', permanent: true }];
+  },
 };
 
 export default nextConfig;

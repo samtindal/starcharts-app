@@ -1,15 +1,13 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ASPECT_TYPES, POINTS } from '@starcharts/astro-core';
-import type { AspectType, PointName } from '@starcharts/astro-core';
-import { ASPECT_SYMBOL, MEANING_LONG, aspectSlug, displayName } from '../../lib/content';
+import { ASPECT_TYPES } from '@starcharts/astro-core';
+import type { AspectType } from '@starcharts/astro-core';
+import { ASPECT_SYMBOL, MEANING_LONG } from '../../lib/content';
 
 export const metadata: Metadata = {
   title: 'Aspect meanings',
   description: 'What conjunctions, sextiles, squares, trines, and oppositions mean, and every planet pair that can form them.',
 };
-
-const isNode = (p: PointName) => p === 'NorthNode' || p === 'SouthNode';
 
 export default function AspectsIndex() {
   const types = Object.keys(ASPECT_TYPES) as AspectType[];
@@ -30,26 +28,6 @@ export default function AspectsIndex() {
           <p>{MEANING_LONG[t]}</p>
         </section>
       ))}
-      <h2>Every pair</h2>
-      <ul className="card-grid">
-        {POINTS.flatMap((a, i) =>
-          POINTS.slice(i + 1).map((b) =>
-            isNode(a) && isNode(b) ? null : (
-              <li key={`${a}-${b}`}>
-                <span className="muted">{displayName(a)} &amp; {displayName(b)}:</span>{' '}
-                {(Object.keys(ASPECT_TYPES) as AspectType[]).map((t, idx, arr) => (
-                  <span key={t}>
-                    <Link href={`/aspects/${aspectSlug(a, t, b)}`}>
-                      <span className="glyph">{ASPECT_SYMBOL[t]}︎</span> {t}
-                    </Link>
-                    {idx < arr.length - 1 ? ' · ' : ''}
-                  </span>
-                ))}
-              </li>
-            ),
-          ),
-        )}
-      </ul>
     </div>
   );
 }

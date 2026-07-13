@@ -8,7 +8,7 @@ import {
 } from '@starcharts/astro-core';
 import {
   T, PLANET_GLYPH, SIGN_GLYPH, GLYPH_SIZE, ASPECT_SYMBOL, SIGN_INFO,
-  displayName, aspectPath, signPath, MEANING_LONG, fmtUTC, rulerDisplay,
+  displayName, aspectPath, signPath, MEANING_LONG, rulerDisplay,
 } from '../lib/content';
 import { composeAspectTeaser } from '../lib/compose';
 
@@ -151,16 +151,17 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
   return (
     <div>
       <div className="clock-head">
-        <div className="dateline">{fmtUTC(date)}</div>
-        <div className="hint">drag any planet to travel through time</div>
+        <div className="clock-title">Astrology Clock</div>
         <div className="clock-controls">
           <input
             type="datetime-local"
             aria-label="Set date"
+            value={date.toISOString().slice(0, 16)}
             onChange={(e) => e.target.value && setMs(clampMs(new Date(e.target.value + 'Z').getTime()))}
           />
           <button onClick={() => setMs(Date.now())}>⌖ Now</button>
         </div>
+        <div className="hint">drag any planet to travel through time</div>
       </div>
 
       <div className="wheel-wrap">

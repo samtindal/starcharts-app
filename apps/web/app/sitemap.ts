@@ -19,7 +19,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}/signs/${s.toLowerCase()}`, changeFrequency: 'daily' as const, priority: 0.7,
     })),
     ...POINTS.map((p) => ({
-      url: `${base}/planets/${kebab(p)}`, changeFrequency: 'daily' as const, priority: 0.7,
+      url: `${base}/planets/${kebab(p)}`,
+      changeFrequency: p === 'Moon' ? ('hourly' as const) : ('daily' as const),
+      priority: 0.7,
     })),
     // Planet-in-sign pages (D3): 12 points x 12 signs = 144.
     ...POINTS.flatMap((p) =>
@@ -29,8 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.55,
       })),
     ),
-    // Sky-today Moon surface (D4).
+    // Sky-today aspect reading (D4).
     { url: `${base}/sky`, changeFrequency: 'hourly', priority: 0.7 },
-    { url: `${base}/moon`, changeFrequency: 'hourly', priority: 0.7 },
   ];
 }
