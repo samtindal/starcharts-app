@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import ConsentBanner from '../components/ads/ConsentBanner';
+import PrivacyChoicesLink from '../components/ads/PrivacyChoicesLink';
+import ServiceWorkerRegister from '../components/ServiceWorkerRegister';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,6 +10,13 @@ export const metadata: Metadata = {
   title: { default: 'Starcharts | Astrology Clock', template: '%s | Starcharts' },
   description:
     'A live astrology clock: drag the planets to travel through time and watch the aspects change. Tropical zodiac, real ephemeris.',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -33,8 +43,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/aspects">Aspect meanings</Link>
             <Link href="/signs">The twelve signs</Link>
             <Link href="/planets">Planets &amp; points</Link>
+            <Link href="/about">About</Link>
+            <Link href="/privacy">Privacy</Link>
+            <PrivacyChoicesLink />
           </nav>
         </footer>
+        <ConsentBanner />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
