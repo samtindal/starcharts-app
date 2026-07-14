@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { chartAt, detectAspects, rankAspects } from '@starcharts/astro-core';
 import Crumbs from '../../components/Crumbs';
+import AdSlot from '../../components/ads/AdSlot';
 import { ASPECT_SYMBOL, PLANET_GLYPH, T, canonicalAspectSlug, displayName } from '../../lib/content';
 import { composeAspectTeaser } from '../../lib/compose';
 
@@ -48,6 +49,8 @@ export default function SkyToday() {
         Watch these move live on the <Link href="/">clock</Link>, or check the Moon&rsquo;s{' '}
         <Link href="/planets/moon">phase and void-of-course windows</Link>.
       </p>
+
+      <AdSlot slot="sky-below-fold" template="sky" />
     </div>
   );
 }

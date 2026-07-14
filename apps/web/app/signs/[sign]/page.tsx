@@ -8,6 +8,7 @@ import {
   rulerDisplay, TRADITIONAL_RULER,
 } from '../../../lib/content';
 import Crumbs from '../../../components/Crumbs';
+import AdSlot from '../../../components/ads/AdSlot';
 
 export const revalidate = 3600; // "planets in this sign now" stays fresh
 export function generateStaticParams() {
@@ -60,6 +61,9 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
         </tbody></table>
       )}
       {paragraphs.map((para, idx) => <p key={idx}>{para}</p>)}
+
+      <AdSlot slot="content-in-article" template="sign" />
+
       <h2>The planets in {s}</h2>
       <ul className="chip-row">
         {POINTS.map((pt) => (
@@ -71,6 +75,8 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
         ))}
       </ul>
       <p className="muted">See all <Link href="/signs">twelve signs</Link>, or watch them turn on the <Link href="/">live clock</Link>.</p>
+
+      <AdSlot slot="content-footer" template="sign" />
     </div>
   );
 }

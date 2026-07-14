@@ -11,6 +11,8 @@ import {
   displayName, aspectPath, signPath, MEANING_LONG, rulerDisplay,
 } from '../lib/content';
 import { composeAspectTeaser } from '../lib/compose';
+import { track } from '../lib/analytics';
+import AdSlot from './ads/AdSlot';
 
 const CX = 400, CY = 400;
 const pt = (lon: number, r: number): [number, number] => {
@@ -105,6 +107,7 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
     hideTip(); // owner rule: tooltip must vanish the moment a drag starts
     svgRef.current?.setPointerCapture(e.pointerId);
     e.preventDefault();
+    track({ name: 'drag_start', body });
   };
 
   const onMove = (e: PointerEvent<SVGSVGElement>) => {
@@ -157,14 +160,26 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
             type="datetime-local"
             aria-label="Set date"
             value={date.toISOString().slice(0, 16)}
-            onChange={(e) => e.target.value && setMs(clampMs(new Date(e.target.value + 'Z').getTime()))}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const next = clampMs(new Date(e.target.value + 'Z').getTime());
+              track({ name: 'date_jump', deltaMs: next - ms });
+              setMs(next);
+            }}
           />
-          <button onClick={() => setMs(Date.now())}>⌖ Now</button>
+          <button
+            onClick={() => {
+              track({ name: 'date_jump', deltaMs: Date.now() - ms });
+              setMs(Date.now());
+            }}
+          >
+            ⌖ Now
+          </button>
         </div>
         <div className="hint">drag any planet to travel through time</div>
       </div>
 
-      <div className="wheel-wrap">
+      <div className="wheel-wrap" data-wheel>
         <svg
           ref={svgRef}
           viewBox="0 0 800 800"
@@ -230,7 +245,10 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
                   onPointerEnter={(e) => showAspectTip(a, e)}
                   onPointerMove={moveTip}
                   onPointerLeave={hideTip}
-                  onClick={() => { window.location.href = aspectPath(a); }}
+                  onClick={() => {
+                    track({ name: 'aspect_tap', a: a.a, type: a.type, b: a.b });
+                    window.location.href = aspectPath(a);
+                  }}
                 />
               </g>
             );
@@ -277,7 +295,12 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
           const st = ASPECT_STYLE[a.type];
           const key = `${a.a}-${a.type}-${a.b}`;
           return (
-            <Link key={key} href={aspectPath(a)} className={`asp ${st.cls}${topKeys.has(key) ? ' asp-top' : ''}`}>
+            <Link
+              key={key}
+              href={aspectPath(a)}
+              className={`asp ${st.cls}${topKeys.has(key) ? ' asp-top' : ''}`}
+              onClick={() => track({ name: 'aspect_tap', a: a.a, type: a.type, b: a.b })}
+            >
               <b>{T(PLANET_GLYPH[a.a])} {T(ASPECT_SYMBOL[a.type])} {T(PLANET_GLYPH[a.b])}</b>{' '}
               {displayName(a.a)} {a.type} {displayName(a.b)}{' '}
               <small>(orb {a.orb.toFixed(1)}°) · {composeAspectTeaser(a.a, a.type, a.b)}</small>
@@ -285,6 +308,8 @@ export default function Wheel({ initialMs }: { initialMs: number }) {
           );
         })}
       </section>
+
+      <AdSlot slot="clock-below-table" template="clock" />
 
       {tip && (
         <div

@@ -7,6 +7,7 @@ import {
 import type { AspectType, PointName } from '@starcharts/astro-core';
 import LiveAspectStatus from '../../../components/LiveAspectStatus';
 import Crumbs from '../../../components/Crumbs';
+import AdSlot from '../../../components/ads/AdSlot';
 import {
   ASPECT_SYMBOL, MEANING_LONG, ARCHETYPE, PLANET_GLYPH, T,
   displayName, parseAspectSlug, planetPath, signPath, nextExactDates, fmtDay,
@@ -128,6 +129,8 @@ export default async function AspectPage({ params }: { params: Promise<{ slug: s
       <p className="lede">{paragraphs[0]}</p>
       {paragraphs.slice(1).map((para, i) => <p key={i}>{para}</p>)}
 
+      <AdSlot slot="content-in-article" template="aspect" />
+
       <p>
         Here the {type} joins <Link href={planetPath(a)}>{displayName(a)}</Link> ({ARCHETYPE[a]}) with{' '}
         <Link href={planetPath(b)}>{displayName(b)}</Link> ({ARCHETYPE[b]}), held {def.angle}° apart.
@@ -188,6 +191,8 @@ export default async function AspectPage({ params }: { params: Promise<{ slug: s
         In traditional astrology this is interpretation, not fate. More:{' '}
         <Link href={`/aspects/${type}`}>about {type}s</Link> · <Link href="/aspects">all aspects</Link>.
       </p>
+
+      <AdSlot slot="content-footer" template="aspect" />
     </div>
   );
 }

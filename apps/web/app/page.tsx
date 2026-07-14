@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Wheel from '../components/Wheel';
+import AdSlot from '../components/ads/AdSlot';
 import { ASPECT_TYPES } from '@starcharts/astro-core';
 import type { AspectType } from '@starcharts/astro-core';
 import { ASPECT_SYMBOL, MEANING } from '../lib/content';
@@ -37,6 +38,7 @@ export default function Home() {
         ))}
         <p>The tighter the orb, the brighter the line.</p>
       </aside>
+      <AdSlot slot="clock-sidebar" template="clock" />
     </>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from '../../../lib/content';
 import Crumbs from '../../../components/Crumbs';
 import MoonPanel from '../../../components/MoonPanel';
+import AdSlot from '../../../components/ads/AdSlot';
 
 export const revalidate = 3600;
 export function generateStaticParams() {
@@ -104,6 +105,8 @@ export default async function PlanetPage({ params }: { params: Promise<{ planet:
 
       {paragraphs.map((para, idx) => <p key={idx}>{para}</p>)}
 
+      <AdSlot slot="content-in-article" template="planet" />
+
       {isMoon && (
         <>
           <h2>Moon phase</h2>
@@ -189,6 +192,8 @@ export default async function PlanetPage({ params }: { params: Promise<{ planet:
         {isMoon && <>Tradition and interpretation, not prediction. </>}
         All <Link href="/planets">planets &amp; points</Link>.
       </p>
+
+      <AdSlot slot="content-footer" template="planet" />
     </div>
   );
 }

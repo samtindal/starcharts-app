@@ -15,6 +15,7 @@ import {
 } from '../../../../lib/content';
 import MiniWheel from '../../../../components/MiniWheel';
 import Crumbs from '../../../../components/Crumbs';
+import AdSlot from '../../../../components/ads/AdSlot';
 
 // On-demand ISR, like the aspect pages: fast builds, sitemap lists all 144.
 export const revalidate = 86400;
@@ -121,6 +122,8 @@ export default async function PlanetInSignPage(
         <p key={i}>{para}</p>
       ))}
 
+      <AdSlot slot="content-in-article" template="planet-in-sign" />
+
       <h2>When {displayName(p)} is in {s}</h2>
       {whenLines.map((line, i) => (
         <p key={i} className={i === 0 ? undefined : 'muted'}>{line}</p>
@@ -164,6 +167,8 @@ export default async function PlanetInSignPage(
         Tradition and interpretation, not prediction. See <Link href={planetPath(p)}>{displayName(p)}</Link> or the{' '}
         <Link href={signPath(s)}>sign of {s}</Link>.
       </p>
+
+      <AdSlot slot="content-footer" template="planet-in-sign" />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     </div>

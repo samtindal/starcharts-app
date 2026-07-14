@@ -33,5 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ),
     // Sky-today aspect reading (D4).
     { url: `${base}/sky`, changeFrequency: 'hourly', priority: 0.7 },
+    { url: `${base}/about`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${base}/privacy`, changeFrequency: 'yearly', priority: 0.3 },
   ];
 }
