@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.next/
+*.log
+.DS_Store
+*.tsbuildinfo
+.turbo/
+
+# Firebase (hardening spec B10, DATA-2 upkeep): local emulator/deploy artifacts
+.firebase/
+firebase-debug.log
+
+# Terraform: local state, provider plugins/binaries, crash logs, tfvars secrets
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Local-only planning/strategy docs: not published to the repo
+/PLAN.md
+/CLAUDE.md
+/docs/
+/tasks/
