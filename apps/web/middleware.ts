@@ -18,6 +18,42 @@ import type { NextRequest } from 'next/server';
 // Header the Cloudflare Transform Rule injects. Keep this in sync with the rule.
 const FENCE_HEADER = 'x-origin-fence';
 
+// Google Cloud health-check prober ranges (stable, documented):
+// https://cloud.google.com/load-balancing/docs/health-check-concepts#ip-ranges
+const HEALTH_CHECK_CIDRS = ['35.191.0.0/16', '130.211.0.0/22'];
+
+function ipToInt(ip: string): number | null {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) return null;
+  return (((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0);
+}
+
+function cidrContains(cidr: string, ip: string): boolean {
+  const [base, bitsStr] = cidr.split('/');
+  const bits = Number(bitsStr);
+  const baseInt = ipToInt(base);
+  const targetInt = ipToInt(ip);
+  if (baseInt === null || targetInt === null) return false;
+  const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
+  return (baseInt & mask) === (targetInt & mask);
+}
+
+// Cloud Run/GFE appends the true TCP peer address as the last entry of
+// X-Forwarded-For; every earlier entry is client-suppliable and untrusted.
+// This is the documented way to recover a trustworthy client IP behind GFE.
+function trueClientIp(req: NextRequest): string | null {
+  const xff = req.headers.get('x-forwarded-for');
+  if (!xff) return null;
+  const parts = xff.split(',').map((s) => s.trim());
+  return parts[parts.length - 1] || null;
+}
+
+function isGoogleHealthCheck(req: NextRequest): boolean {
+  const ip = trueClientIp(req);
+  if (!ip) return false;
+  return HEALTH_CHECK_CIDRS.some((cidr) => cidrContains(cidr, ip));
+}
+
 // Constant-time string comparison so a mismatched header cannot be probed by
 // timing. Both operands are short shared secrets.
 function safeEqual(a: string, b: string): boolean {
@@ -40,9 +76,11 @@ export function middleware(req: NextRequest) {
   }
 
   // Allow App Hosting / Cloud Run health checks, which hit the origin directly
-  // (not through Cloudflare) and cannot carry the injected header.
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('GoogleHC/')) return NextResponse.next();
+  // (not through Cloudflare) and cannot carry the injected header. Verified by
+  // source IP against Google's documented prober ranges, not by User-Agent:
+  // User-Agent is client-controlled, so trusting a "GoogleHC/" prefix let
+  // anyone bypass the fence by sending that header themselves.
+  if (isGoogleHealthCheck(req)) return NextResponse.next();
 
   const provided = req.headers.get(FENCE_HEADER);
   if (provided && safeEqual(provided, secret)) return NextResponse.next();
