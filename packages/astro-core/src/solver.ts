@@ -40,18 +40,10 @@ function bisect(planet: PointName, targetLon: number, lo: number, hi: number): n
   return (lo + hi) / 2;
 }
 
-/**
- * Robust fallback: sample a window around t0, collect every sign-change
- * bracket of f(t), pick the one nearest in time, weighted so brackets in
- * `preferDirection` win over slightly-nearer ones behind us (hysteresis
- * keeps a drag from flickering between past and future branches).
- */
-function bracketedSolve(
-  planet: PointName, targetLon: number, t0: number, preferDirection: number,
+/** One windowed sweep for sign-change brackets of f(t) = wrapDiff(lon(t) − target), nearest-in-time first. */
+function scanForBracket(
+  planet: PointName, targetLon: number, t0: number, span: number, N: number, preferDirection: number,
 ): number | null {
-  const synodicMs = (360 / MEAN_MOTION[planet]) * DAY_MS;
-  const span = Math.min(synodicMs, 500 * DAY_MS);
-  const N = 256;
   const step = (2 * span) / N;
   let prevT = t0 - span;
   let prevF = wrapDiff(longitudeAt(planet, new Date(prevT)) - targetLon);
@@ -73,6 +65,39 @@ function bracketedSolve(
   });
   const best = brackets[0];
   return bisect(planet, targetLon, best.lo, best.hi);
+}
+
+/**
+ * Robust fallback: sample a window around t0, collect every sign-change
+ * bracket of f(t), pick the one nearest in time, weighted so brackets in
+ * `preferDirection` win over slightly-nearer ones behind us (hysteresis
+ * keeps a drag from flickering between past and future branches).
+ *
+ * Two tiers. Tier 1 is the local retrograde-loop window (one synodic-scale
+ * cycle, capped at 500 days): cheap, and enough for most drag frames. Tier 2
+ * only runs when tier 1 finds nothing, widening the scan to whatever a slow
+ * outer planet's own drift rate needs to plausibly reach the target. Without
+ * it, a single fast-drag frame on Neptune/Uranus/Pluto (targets requesting
+ * more than the planet's few-degree annual wobble) silently fails and the
+ * solver reports "no solution nearby" even though one exists a few years
+ * out, exactly the "drag Pluto, land centuries away" feature PLAN.md §4
+ * promises. Found by the fuzz test in core.test.ts, not a hypothetical.
+ */
+function bracketedSolve(
+  planet: PointName, targetLon: number, t0: number, preferDirection: number,
+): number | null {
+  const localSpan = Math.min((360 / MEAN_MOTION[planet]) * DAY_MS, 500 * DAY_MS);
+  const local = scanForBracket(planet, targetLon, t0, localSpan, 256, preferDirection);
+  if (local !== null) return local;
+
+  const meanRate = MEAN_MOTION[planet] / DAY_MS; // deg/ms
+  const errDeg = Math.abs(wrapDiff(targetLon - longitudeAt(planet, new Date(t0))));
+  // 3x safety margin over pure mean-drift time, since actual instantaneous
+  // rate varies (retrograde loops slow/reverse it); ceilinged at a century
+  // so a pathological input can't scan indefinitely.
+  const wideSpan = Math.min(Math.max(localSpan, (errDeg / meanRate) * 3), 100 * 365.25 * DAY_MS);
+  if (wideSpan <= localSpan) return null;
+  return scanForBracket(planet, targetLon, t0, wideSpan, 512, preferDirection);
 }
 
 /**

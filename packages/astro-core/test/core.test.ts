@@ -3,7 +3,7 @@ import { Seasons, SearchMoonPhase, type AstroTime } from '../src/ephemeris.js';
 import {
   longitudeAt, chartAt, isRetrograde, detectAspects, dateForLongitude,
   norm360, wrapDiff, separation, PLANETS, ASPECT_TYPES, nextExactAspectDates,
-  crossAspects,
+  crossAspects, MEAN_MOTION,
 } from '../src/index.js';
 // natal.ts is engine-internal (not re-exported from index); import it directly.
 import { natalChart, transitAspects, synastry } from '../src/natal.js';
@@ -289,5 +289,57 @@ describe('inverse solver (drag → date)', () => {
     expect(separation(longitudeAt('Mercury', solved), target)).toBeLessThan(0.01);
     // Within ±60 days of the station, not another year
     expect(Math.abs(solved.getTime() - station!.getTime())).toBeLessThan(60 * 86_400_000);
+  });
+
+  it('converges through a Mercury station without era jumps, across 12 years spread 1900-2100', () => {
+    // Same check as above, but repeated across the same 12 years the
+    // accuracy audit spans (E2: "fuzz targetLon × date"), not just 2026.
+    for (const year of [1900, 1918, 1936, 1954, 1972, 1990, 2008, 2026, 2044, 2062, 2080, 2100]) {
+      let station: Date | null = null;
+      for (let i = 1; i < 365 && !station; i++) {
+        const a = isRetrograde('Mercury', new Date(Date.UTC(year, 0, i)));
+        const b = isRetrograde('Mercury', new Date(Date.UTC(year, 0, i + 1)));
+        if (a !== b) station = new Date(Date.UTC(year, 0, i));
+      }
+      expect(station, `no station found in ${year}`).not.toBeNull();
+      const target = longitudeAt('Mercury', station!);
+      const solved = dateForLongitude('Mercury', target, new Date(station!.getTime() + 5 * 86_400_000));
+      expect(separation(longitudeAt('Mercury', solved), target), `${year} convergence`).toBeLessThan(0.01);
+      expect(Math.abs(solved.getTime() - station!.getTime()), `${year} era jump`).toBeLessThan(60 * 86_400_000);
+    }
+  });
+
+  it('fuzz: converges and stays nearest-in-time for random planet x date x small target offset', () => {
+    // Deterministic PRNG (mulberry32) so a failure is reproducible from the
+    // seed alone, not a flaky one-off.
+    let seed = 0xC0FFEE;
+    const rand = () => {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const EPOCH_1900 = Date.UTC(1900, 0, 1);
+    const EPOCH_2100 = Date.UTC(2100, 0, 1);
+
+    for (let trial = 0; trial < 300; trial++) {
+      const planet = PLANETS[Math.floor(rand() * PLANETS.length)];
+      const near = new Date(EPOCH_1900 + rand() * (EPOCH_2100 - EPOCH_1900));
+      // A drag-sized step (±15°), like one frame of the pointer drag, not an
+      // arbitrary target anywhere on the wheel.
+      const target = norm360(longitudeAt(planet, near) + (rand() * 30 - 15));
+      const solved = dateForLongitude(planet, target, near);
+
+      expect(separation(longitudeAt(planet, solved), target), `${planet} @ ${near.toISOString()} convergence`)
+        .toBeLessThan(0.02);
+      // Nearest-in-time: a small target nudge should resolve within a few
+      // synodic periods, never jump an unrelated era. Generous bound (20
+      // synodic periods, floor 5 years) absorbs retrograde-loop searches
+      // without masking a genuine "wrong era" bug.
+      const synodicMs = (360 / MEAN_MOTION[planet]) * 86_400_000;
+      const bound = Math.max(20 * synodicMs, 5 * 365 * 86_400_000);
+      expect(Math.abs(solved.getTime() - near.getTime()), `${planet} @ ${near.toISOString()} nearest-in-time`)
+        .toBeLessThan(bound);
+    }
   });
 });
