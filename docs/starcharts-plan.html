@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Starcharts | Plan & Execution Dashboard</title>
+<style>
+  :root{
+    --bg:#0A1628; --bg-deep:#060D18;
+    --line:#6B7684; --line-faint:#3A4556;
+    --gold:#C9A227; --gold-bright:#E8C547;
+    --planet:#AEB9C4; --planet-bright:#E2EAF2;
+    --soft:#6FA08B; --hard:#6E9BC5;
+    --parchment:#E8DCC4;
+    --panel:#0E1D33; --panel-2:#112441;
+    --done:#6FA08B; --active:#E8C547; --paused:#AEB9C4; --pending:#6B7684;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:radial-gradient(circle at 50% -10%, #0E1D33 0%, var(--bg) 45%, var(--bg-deep) 100%);
+    color:var(--parchment); font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:0 22px 90px}
+  h1,h2,h3{font-family:"Cormorant Garamond","IM Fell English",Georgia,serif; font-weight:600; color:var(--parchment); letter-spacing:.3px}
+  a{color:var(--gold-bright); text-decoration:none}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+
+  /* ---- header ---- */
+  header{padding:54px 22px 26px; text-align:center; position:relative; overflow:hidden}
+  header::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(circle at 50% 40%, rgba(201,162,39,.06), transparent 60%);}
+  .kicker{font-family:"SF Mono",ui-monospace,monospace; text-transform:uppercase; letter-spacing:4px;
+    font-size:12px; color:var(--gold); margin-bottom:14px}
+  header h1{font-size:clamp(38px,6vw,64px); margin:0 0 8px; color:var(--gold-bright)}
+  header p{max-width:640px; margin:6px auto 0; color:var(--planet); font-size:18px}
+  .glyphrow{font-size:26px; color:var(--gold); letter-spacing:10px; margin:22px 0 4px; opacity:.85}
+
+  /* ---- nav ---- */
+  nav{position:sticky; top:0; z-index:20; background:rgba(6,13,24,.86); backdrop-filter:blur(9px);
+    border-top:1px solid var(--line-faint); border-bottom:1px solid var(--line-faint); margin-bottom:34px}
+  nav .navin{max-width:1100px; margin:0 auto; display:flex; gap:4px; flex-wrap:wrap; padding:8px 16px; justify-content:center}
+  nav button{background:none; border:1px solid transparent; color:var(--planet); font-family:"SF Mono",ui-monospace,monospace;
+    font-size:12.5px; letter-spacing:1px; text-transform:uppercase; padding:8px 14px; border-radius:6px; cursor:pointer; transition:.18s}
+  nav button:hover{color:var(--parchment); border-color:var(--line-faint)}
+  nav button.active{color:var(--bg-deep); background:var(--gold); border-color:var(--gold)}
+
+  section{display:none; animation:fade .4s ease}
+  section.show{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+
+  h2.sec{font-size:30px; color:var(--gold-bright); margin:8px 0 4px; display:flex; align-items:baseline; gap:12px}
+  h2.sec .n{font-family:"SF Mono",monospace; font-size:14px; color:var(--gold); opacity:.7}
+  .lede{color:var(--planet); font-size:17px; max-width:760px; margin:0 0 26px}
+
+  .panel{background:linear-gradient(180deg,var(--panel),var(--bg)); border:1px solid var(--line-faint);
+    border-radius:12px; padding:22px 24px; margin:16px 0}
+  .panel h3{margin:0 0 10px; color:var(--gold); font-size:20px}
+  .grid{display:grid; gap:16px}
+  @media(min-width:720px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
+
+  /* ---- stat cards ---- */
+  .stat{background:var(--panel-2); border:1px solid var(--line-faint); border-radius:10px; padding:16px 18px; text-align:center}
+  .stat .v{font-family:"Cormorant Garamond",serif; font-size:38px; color:var(--gold-bright); line-height:1}
+  .stat .l{font-size:12.5px; letter-spacing:1px; text-transform:uppercase; color:var(--planet); margin-top:8px; font-family:"SF Mono",monospace}
+
+  /* ---- progress ---- */
+  .pbar{height:12px; background:var(--bg-deep); border:1px solid var(--line-faint); border-radius:20px; overflow:hidden; margin:6px 0 2px}
+  .pbar > span{display:block; height:100%; background:linear-gradient(90deg,var(--soft),var(--gold-bright)); width:0; transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+  .plabel{display:flex; justify-content:space-between; font-family:"SF Mono",monospace; font-size:12.5px; color:var(--planet)}
+
+  /* ---- phase timeline ---- */
+  .phase{border-left:2px solid var(--line-faint); padding:2px 0 2px 22px; margin:0 0 4px; position:relative}
+  .phase::before{content:""; position:absolute; left:-8px; top:6px; width:13px; height:13px; border-radius:50%;
+    background:var(--bg); border:2px solid var(--line)}
+  .phase.done::before{background:var(--done); border-color:var(--done)}
+  .phase.active::before{background:var(--active); border-color:var(--active); box-shadow:0 0 0 4px rgba(232,197,71,.16)}
+  .phase.next::before{background:var(--bg); border-color:var(--gold)}
+  .phase h4{margin:0; font-family:"SF Mono",monospace; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--gold)}
+  .phase .body{color:var(--planet); font-size:14.5px; margin:2px 0 16px}
+  .phase .body b{color:var(--parchment); font-weight:600}
+
+  /* ---- badges ---- */
+  .badge{display:inline-block; font-family:"SF Mono",monospace; font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; border:1px solid; vertical-align:middle}
+  .b-done{color:var(--done); border-color:var(--done); background:rgba(111,160,139,.10)}
+  .b-active{color:var(--active); border-color:var(--active); background:rgba(232,197,71,.10)}
+  .b-paused{color:var(--planet); border-color:var(--planet); background:rgba(174,185,196,.08)}
+  .b-pending{color:var(--line); border-color:var(--line); background:rgba(107,118,132,.08)}
+
+  /* ---- table ---- */
+  table{width:100%; border-collapse:collapse; margin:10px 0; font-size:14.5px}
+  th,td{text-align:left; padding:11px 12px; border-bottom:1px solid var(--line-faint); vertical-align:top}
+  th{font-family:"SF Mono",monospace; font-size:11.5px; letter-spacing:1px; text-transform:uppercase; color:var(--gold); font-weight:400}
+  tr:hover td{background:rgba(17,36,65,.5)}
+  td .id{font-family:"SF Mono",monospace; color:var(--gold-bright); font-weight:600}
+  .tier{font-family:"SF Mono",monospace; font-weight:600; padding:2px 7px; border-radius:5px; font-size:12px}
+  .P0{color:var(--gold-bright); background:rgba(232,197,71,.12)}
+  .P1{color:var(--soft); background:rgba(111,160,139,.12)}
+  .P2{color:var(--hard); background:rgba(110,155,197,.12)}
+  .P3{color:var(--planet); background:rgba(174,185,196,.08)}
+
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 8px}
+  .filters button{background:var(--panel-2); border:1px solid var(--line-faint); color:var(--planet);
+    font-family:"SF Mono",monospace; font-size:12px; padding:6px 13px; border-radius:20px; cursor:pointer; transition:.15s}
+  .filters button:hover{color:var(--parchment)}
+  .filters button.on{background:var(--gold); color:var(--bg-deep); border-color:var(--gold)}
+  tr.hide{display:none}
+
+  /* ---- architecture ---- */
+  .arch{width:100%; height:auto; display:block; margin:8px 0}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; font-family:"SF Mono",monospace; font-size:12px; color:var(--planet); margin-top:6px}
+  .legend span{display:inline-flex; align-items:center; gap:7px}
+  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block}
+
+  /* ---- financials ---- */
+  .scentabs{display:flex; gap:8px; margin:6px 0 18px; flex-wrap:wrap}
+  .scentabs button{flex:1; min-width:150px; background:var(--panel-2); border:1px solid var(--line-faint); color:var(--planet);
+    padding:14px; border-radius:10px; cursor:pointer; font-family:inherit; transition:.18s; text-align:left}
+  .scentabs button .st{font-family:"SF Mono",monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold)}
+  .scentabs button .sv{font-family:"Cormorant Garamond",serif; font-size:26px; color:var(--parchment); line-height:1.2; margin-top:3px}
+  .scentabs button.on{border-color:var(--gold); background:linear-gradient(180deg,var(--panel-2),rgba(201,162,39,.06)); box-shadow:0 0 0 1px var(--gold)}
+  .scentabs button.on .sv{color:var(--gold-bright)}
+
+  .barchart{display:flex; align-items:flex-end; gap:10px; height:210px; padding:14px 6px 0; border-bottom:1px solid var(--line-faint); margin:6px 0 2px}
+  .bar{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:6px}
+  .bar .fill{width:100%; max-width:54px; background:linear-gradient(180deg,var(--gold-bright),var(--gold)); border-radius:5px 5px 0 0;
+    transition:height .8s cubic-bezier(.2,.8,.2,1); min-height:2px; position:relative}
+  .bar .fill.cost{background:linear-gradient(180deg,var(--hard),#4d6d8f)}
+  .bar .amt{font-family:"SF Mono",monospace; font-size:11.5px; color:var(--gold-bright)}
+  .bar .yr{font-family:"SF Mono",monospace; font-size:11px; color:var(--planet)}
+  .breakdown td:last-child, .breakdown th:last-child{text-align:right; font-family:"SF Mono",monospace}
+  .assump{font-size:13px; color:var(--planet); border-left:2px solid var(--gold); padding:2px 0 2px 14px; margin:12px 0}
+  .note{font-size:13px; color:var(--planet); font-style:italic}
+  .footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--line-faint); font-size:13px; color:var(--planet); text-align:center}
+  .pill{font-family:"SF Mono",monospace; font-size:11px; color:var(--gold); border:1px solid var(--line-faint); padding:3px 8px; border-radius:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Multi-Agent Build Plan</div>
+  <h1>Starcharts</h1>
+  <p>An interactive astrology clock. Grab a planet, drag it through the zodiac, and watch the date, chart, and aspect lines change live. A time machine disguised as a clock.</p>
+  <div class="glyphrow">&#9737;&#65038; &#9789;&#65038; &#9791;&#65038; &#9792;&#65038; &#9794;&#65038; &#9795;&#65038; &#9796;&#65038;</div>
+  <div class="note">Snapshot as of 12 July 2026 &nbsp;&bull;&nbsp; working repo: astrology-clock</div>
+</header>
+
+<nav><div class="navin">
+  <button data-t="overview" class="active">Overview</button>
+  <button data-t="execution">Execution</button>
+  <button data-t="architecture">Architecture</button>
+  <button data-t="roadmap">Roadmap</button>
+  <button data-t="financials">Financials</button>
+</div></nav>
+
+<div class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview" class="show">
+  <h2 class="sec"><span class="n">01</span> The product</h2>
+  <p class="lede">Starcharts competes on delight and legibility, not depth. The positioning, decided, is the casual astrology consumer: every feature filters through "would someone with casual interest get it in five seconds?" Depth tooling like house systems stays deferred.</p>
+
+  <div class="grid g4">
+    <div class="stat"><div class="v" data-count="11">0</div><div class="l">Agents shipped</div></div>
+    <div class="stat"><div class="v" data-count="506">0</div><div class="l">URLs in sitemap</div></div>
+    <div class="stat"><div class="v" data-count="144">0</div><div class="l">Planet-in-sign pages</div></div>
+    <div class="stat"><div class="v" data-count="88">0</div><div class="l">Engine tests green</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="panel">
+      <h3>The hook</h3>
+      <p>The wheel shows current planetary positions. Grab any planet and drag it around the zodiac and the date changes to match: drag the Moon for hours and days, drag Saturn for years, drag Pluto for centuries. Aspect lines (conjunction, sextile, square, trine, opposition) appear and dissolve as you scrub.</p>
+    </div>
+    <div class="panel">
+      <h3>Why it can win</h3>
+      <p>The top tier of web astrology renders static images from form posts. A single canonical timestamp driving a 60fps draggable wheel is a categorically different experience, and it is shareable in a way form results are not. Starcharts can out-play incumbents and be first through the MCP door with a consumer brand attached.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Three revenue surfaces</h3>
+    <div class="grid g3">
+      <div>
+        <p><b style="color:var(--gold-bright)">Ads (primary).</b> Programmatic SEO across every aspect pair, sign, and a daily sky page builds thousands of long-tail pages that each carry ads. The draggable toy drives session depth, which is what makes the inventory valuable. Ads sit on content pages and below the wheel, never over the interaction.</p>
+      </div>
+      <div>
+        <p><b style="color:var(--soft)">Paid reports (secondary).</b> One-time PDFs (natal, year ahead, relationship blueprint) at ~$9.99, free web previews, generated entirely by interpret.ts and ranked by aspectStrength. Billed via a Merchant of Record (tax and PCI handled), global from day one, no account needed. Hedges Google-ranking risk. Accounts, subscriptions, and a paid app stay deferred.</p>
+      </div>
+      <div>
+        <p><b style="color:var(--planet-bright)">MCP server (tertiary).</b> The first consumer-branded astrology MCP. A free tier returns positions with attribution and a link back, so every AI answer becomes a referral. A paid tier covers natal, transits, synastry, and batch queries. Distribution first, revenue second.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Definition of done, v1 launch</h3>
+    <p>Live clock accurate to under 0.1&deg; vs reference; all 12 points draggable at 30fps+ on mid-tier mobile; 5 aspect types with correct orbs and tap-to-explain; date input working (birthdate/natal inputs are P2, not required for v1); 500+ indexed content pages; PWA installable; MCP live with a free tier and one paid path; ads serving on content pages; Lighthouse mobile 90+.</p>
+  </div>
+</section>
+
+<!-- ============ EXECUTION ============ -->
+<section id="execution">
+  <h2 class="sec"><span class="n">02</span> Where we are</h2>
+  <p class="lede">The initial build and the casual-depth phase 2 shipped, then P1 scope was enforced for a date-scrubbing-only v1: the engine, the interactive wheel, the content pages, the B3 ephemeris extensions, planet-in-sign pages, and the moon/sky surface are all live and green. The birth-data web UI (natal, rising, the Big Three, synastry) was removed and deferred to P2; its pure engine math stays in astro-core but is unexported, and no client-side storage remains. Security hardening is in (origin headers, a Cloudflare-to-origin fence, SHA-pinned CI, Dependabot), and a full production <span class="mono">next build</span> is verified (35 routes, prerender/ISR green). The work ahead is launch (Firebase App Hosting rollout, Cloudflare edge ops, ads, QA audit) plus deepening the templated content pages (D5).</p>
+
+  <div class="panel">
+    <div class="plabel"><span>Overall build progress</span><span id="progpct">0%</span></div>
+    <div class="pbar"><span id="progfill"></span></div>
+    <div class="grid g4" style="margin-top:18px">
+      <div class="stat"><div class="v" style="color:var(--done)">11</div><div class="l">Shipped</div></div>
+      <div class="stat"><div class="v" style="color:var(--active)">1</div><div class="l">In progress</div></div>
+      <div class="stat"><div class="v" style="color:var(--planet)">1</div><div class="l">Paused by owner</div></div>
+      <div class="stat"><div class="v" style="color:var(--line)">3</div><div class="l">Not started</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Phased timeline</h3>
+
+    <div class="phase done">
+      <h4>Phase 0 &bull; Foundation &bull; complete</h4>
+      <div class="body"><b>A1 Architect</b>, <b>B1 Ephemeris Core</b>, <b>B2 Chart Renderer</b>. Monorepo scaffold, shared types, CI, and the pure calculation engine (Sun to Pluto plus lunar nodes, sign mapping, retrograde flags, aspect detection). 34 tests against astronomical invariants. <span class="badge b-done">done</span></div>
+    </div>
+
+    <div class="phase done">
+      <h4>Phase 1 &bull; Core build &bull; mostly complete</h4>
+      <div class="body">The React wheel with drag, tooltips, and legend (<b>C1</b>) plus the content and SEO layer (<b>D1</b>) shipped in apps/web on Next.js 15: a 358-URL sitemap, 325 aspect-pair pages with computed next-exact dates, 12 sign and 12 planet pages, hubs, robots, and a PWA manifest. Production build and smoke tests green. <span class="badge b-done">done</span></div>
+    </div>
+
+    <div class="phase done">
+      <h4>Phase 2 &bull; casual-depth additions &bull; shipped</h4>
+      <div class="body">A hobby-astrologer review found the toy was nailed but casual essentials were missing. That gap is now closed. <b>B3 ephemeris extensions</b> landed first (luminary-weighted orbs, moon phase, void-of-course, Ascendant/MC math, mode-aware aspect-importance scoring), then <b>C3 rising sign</b> (birth time plus offline city search, Big Three panel, Whole Sign ring), <b>D3 planet-in-sign</b> (144 pages, computed next-in-sign dates), and <b>D4 sky-today Moon</b> (live phase glyph, void-of-course, /sky and /moon) shipped on top. astro-core is now 88 tests green. Chiron and quincunx were deferred to P2 by owner decision. <span class="badge b-done">done</span></div>
+    </div>
+
+    <div class="phase done">
+      <h4>Phase 1.4 &bull; P1 scope enforcement &amp; hardening &bull; complete</h4>
+      <div class="body">Owner trimmed v1 to date-scrubbing only (2026-07-12). <b>Part A</b> removed the birth-data web surface: the <span class="mono">/chart</span> and <span class="mono">/rising</span> pages, the BirthChart and NatalWheel components, the city and timezone data, and the nav and sitemap entries. No client-side storage remains (localStorage, cookies, and IndexedDB are all gone); <span class="mono">natal.ts</span> and <span class="mono">houses.ts</span> stay in astro-core but are unexported, so P2 re-enable is a one-line change. <b>Part B</b> landed the security hardening: origin headers (CSP frame-ancestors, HSTS, nosniff, X-Frame-Options), a Cloudflare-to-origin fence in <span class="mono">middleware.ts</span> keyed on a Secret Manager value, plus SHA-pinned GitHub Actions and Dependabot. MCP-only items (error-string scrub, proxy-trust) defer with the paused server; console-only items (edge rate limit, branch protection, project IAM, budget alerts) are tracked as Cloudflare and GitHub ops. 88 engine and 9 MCP tests green, production build verified. <span class="badge b-done">done</span></div>
+    </div>
+
+    <div class="phase active">
+      <h4>Phase 1 &bull; open items</h4>
+      <div class="body"><b>C2 Date &amp; natal input</b>: the P1 date input that scrubs the clock to any calendar date is live. The natal surface (Big Three, Whole Sign ring, transit-to-natal, synastry) was pulled from v1 and deferred to P2 by the 2026-07-12 scope decision, so the only remaining Phase 1 work is the launch prep below. <b>D2 MCP Server</b> is built and verified but <b>paused by owner</b>: do not resume without asking. <span class="badge b-active">in progress</span> <span class="badge b-paused">D2 paused</span></div>
+    </div>
+
+    <div class="phase next">
+      <h4>Phase 1.5 &bull; launch prep &bull; next up</h4>
+      <div class="body">The local production <span class="mono">next build</span> is confirmed. Launch is now the <b>Firebase App Hosting</b> rollout: the app migrated off self-managed Cloud Run, so the Dockerfiles, Terraform, and the deploy workflow are retired and App Hosting builds and rolls out on push to <span class="mono">main</span>. That pairs with the Cloudflare edge ops (Full-strict TLS, cache rules on the content routes, Bot Fight, one rate-limit rule, and the Transform Rule that feeds the origin fence). Then <b>E1 growth &amp; ads</b> (network-agnostic ad layer, session-depth internal linking, a sky-today surface, affiliate and email), <b>E2 QA &amp; performance</b> (accuracy audit vs astro.com, Lighthouse 90+), and <b>D5 content depth</b> (deepen the templated aspect, sign, and planet pages). <span class="badge b-pending">not started</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Correctness nits, resolved in B3</h3>
+    <p>Two items the review caught are now fixed. Sun and Moon <span class="mono">speed</span> was using mean rather than true motion, which skewed the applying-versus-separating flag (B3 &sect;1, true speed); and orbs were a flat scalar when they should be luminary-weighted (B3 &sect;2, <span class="mono">orbFor</span>, now feeding the aspect pages and live status with no hardcoded orb text).</p>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <h2 class="sec"><span class="n">03</span> Architecture</h2>
+  <p class="lede">A pure TypeScript calculation core is the keystone. Web, MCP, and the OG-image renderer all import the same functions, so they can never disagree on a number. Single source of truth for chart state: one UTC timestamp.</p>
+
+  <div class="panel">
+    <svg class="arch" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="SF Mono, monospace">
+      <defs>
+        <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#6B7684"/>
+        </marker>
+        <marker id="arrowG" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#C9A227"/>
+        </marker>
+      </defs>
+
+      <!-- CORE -->
+      <rect x="300" y="235" width="300" height="92" rx="12" fill="#112441" stroke="#C9A227" stroke-width="2"/>
+      <text x="450" y="266" text-anchor="middle" fill="#E8C547" font-size="17">packages/astro-core</text>
+      <text x="450" y="288" text-anchor="middle" fill="#AEB9C4" font-size="12">pure TS: positions, signs, aspects,</text>
+      <text x="450" y="305" text-anchor="middle" fill="#AEB9C4" font-size="12">natal, transits, synastry &bull; zero DOM deps</text>
+
+      <!-- chart-svg -->
+      <rect x="300" y="120" width="300" height="66" rx="12" fill="#0E1D33" stroke="#6FA08B" stroke-width="1.5"/>
+      <text x="450" y="147" text-anchor="middle" fill="#6FA08B" font-size="15">packages/chart-svg</text>
+      <text x="450" y="167" text-anchor="middle" fill="#AEB9C4" font-size="12">SVG renderer, theme tokens, glyphs</text>
+
+      <!-- ephemeris engine (dependency) -->
+      <rect x="330" y="405" width="240" height="58" rx="10" fill="#0A1628" stroke="#3A4556" stroke-width="1.5"/>
+      <text x="450" y="430" text-anchor="middle" fill="#AEB9C4" font-size="13">astronomy-engine (MIT)</text>
+      <text x="450" y="449" text-anchor="middle" fill="#6B7684" font-size="11">no Swiss Ephemeris, ever</text>
+
+      <!-- web app -->
+      <rect x="40" y="120" width="210" height="118" rx="12" fill="#112441" stroke="#6E9BC5" stroke-width="1.5"/>
+      <text x="145" y="148" text-anchor="middle" fill="#E2EAF2" font-size="15">apps/web</text>
+      <text x="145" y="170" text-anchor="middle" fill="#AEB9C4" font-size="11.5">Next.js App Router + PWA</text>
+      <text x="145" y="189" text-anchor="middle" fill="#AEB9C4" font-size="11.5">client wheel (drag)</text>
+      <text x="145" y="207" text-anchor="middle" fill="#AEB9C4" font-size="11.5">server SEO pages</text>
+      <text x="145" y="225" text-anchor="middle" fill="#6FA08B" font-size="11.5">&#10003; live</text>
+
+      <!-- mcp app -->
+      <rect x="650" y="120" width="210" height="118" rx="12" fill="#112441" stroke="#6E9BC5" stroke-width="1.5"/>
+      <text x="755" y="148" text-anchor="middle" fill="#E2EAF2" font-size="15">apps/mcp</text>
+      <text x="755" y="170" text-anchor="middle" fill="#AEB9C4" font-size="11.5">MCP server, HTTP</text>
+      <text x="755" y="189" text-anchor="middle" fill="#AEB9C4" font-size="11.5">6 tools verified</text>
+      <text x="755" y="211" text-anchor="middle" fill="#AEB9C4" font-size="11.5" font-style="italic">paused by owner</text>
+
+      <!-- users layer -->
+      <rect x="40" y="20" width="210" height="56" rx="10" fill="#0E1D33" stroke="#3A4556"/>
+      <text x="145" y="44" text-anchor="middle" fill="#E8DCC4" font-size="13">Search + PWA users</text>
+      <text x="145" y="62" text-anchor="middle" fill="#6B7684" font-size="11">ads on content pages</text>
+
+      <rect x="650" y="20" width="210" height="56" rx="10" fill="#0E1D33" stroke="#3A4556"/>
+      <text x="755" y="44" text-anchor="middle" fill="#E8DCC4" font-size="13">AI assistants</text>
+      <text x="755" y="62" text-anchor="middle" fill="#6B7684" font-size="11">MCP referral loop</text>
+
+      <!-- hosting -->
+      <rect x="300" y="500" width="300" height="46" rx="10" fill="#0E1D33" stroke="#C9A227" stroke-width="1.2"/>
+      <text x="450" y="521" text-anchor="middle" fill="#C9A227" font-size="13">GCP Cloud Run x2, scale-to-zero</text>
+      <text x="450" y="537" text-anchor="middle" fill="#6B7684" font-size="10.5">Cloud CDN &bull; Cloud Armor &bull; Terraform + GitHub Actions</text>
+
+      <!-- edges -->
+      <line x1="145" y1="76" x2="145" y2="118" stroke="#6B7684" marker-end="url(#arrow)"/>
+      <line x1="755" y1="76" x2="755" y2="118" stroke="#6B7684" marker-end="url(#arrow)"/>
+      <!-- web/mcp import core -->
+      <path d="M250 200 C 290 210, 290 250, 298 262" fill="none" stroke="#C9A227" stroke-width="1.6" marker-end="url(#arrowG)"/>
+      <path d="M650 200 C 610 210, 610 250, 602 262" fill="none" stroke="#C9A227" stroke-width="1.6" marker-end="url(#arrowG)"/>
+      <!-- chart-svg import core -->
+      <line x1="450" y1="186" x2="450" y2="233" stroke="#C9A227" stroke-width="1.6" marker-end="url(#arrowG)"/>
+      <!-- web imports chart-svg -->
+      <path d="M300 150 C 275 150, 262 150, 252 150" fill="none" stroke="#6B7684" stroke-width="1.3" marker-end="url(#arrow)"/>
+      <!-- core uses engine -->
+      <line x1="450" y1="405" x2="450" y2="329" stroke="#6B7684" marker-end="url(#arrow)"/>
+      <!-- hosting -->
+      <line x1="380" y1="500" x2="300" y2="329" stroke="#3A4556" stroke-dasharray="4 4"/>
+      <line x1="520" y1="500" x2="600" y2="329" stroke="#3A4556" stroke-dasharray="4 4"/>
+    </svg>
+    <div class="legend">
+      <span><span class="swatch" style="background:#C9A227"></span> imports astro-core (shared truth)</span>
+      <span><span class="swatch" style="background:#6B7684"></span> data / request flow</span>
+      <span><span class="swatch" style="background:#6FA08B"></span> live</span>
+      <span><span class="swatch" style="background:#3A4556"></span> deploys to</span>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="panel"><h3>State model</h3><p>Everything derives from one UTC timestamp: positions, aspects, and the URL. The drag interaction writes the timestamp via an inverse ephemeris solver. No duplicated derived state.</p></div>
+    <div class="panel"><h3>The hard problem</h3><p>Forward is easy (date to longitudes). Dragging inverts it: given a planet at a longitude, find the date. It is non-unique near retrograde loops, so the solver searches nearest-in-time and prefers continuity with the drag direction.</p></div>
+    <div class="panel"><h3>Rendering</h3><p>Hand-built SVG, not a chart library, layered as zodiac ring, ticks, aspect lines, glyphs. It scales crisply, animates via CSS, and doubles as the server-side OG-image renderer.</p></div>
+  </div>
+
+  <div class="panel">
+    <h3>Nautical theme tokens</h3>
+    <div class="legend" style="font-size:12.5px; gap:22px">
+      <span><span class="swatch" style="background:#0A1628; border:1px solid #6B7684"></span> bg navy #0A1628</span>
+      <span><span class="swatch" style="background:#C9A227"></span> gold, signs #C9A227</span>
+      <span><span class="swatch" style="background:#AEB9C4"></span> silver, planets #AEB9C4</span>
+      <span><span class="swatch" style="background:#6FA08B"></span> verdigris, soft aspects #6FA08B</span>
+      <span><span class="swatch" style="background:#6E9BC5"></span> steel blue, hard aspects #6E9BC5</span>
+      <span><span class="swatch" style="background:#E8DCC4"></span> parchment #E8DCC4</span>
+    </div>
+    <p class="note" style="margin-top:12px">Signs gold, planets and nodes silver, so the two layers read instantly. Never red, pink, purple, or orange and yellow. Astrological glyphs carry U+FE0E to force monochrome text rendering rather than emoji.</p>
+  </div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+<section id="roadmap">
+  <h2 class="sec"><span class="n">04</span> Roadmap</h2>
+  <p class="lede">Every agent gets a task brief with scope, acceptance criteria, and interfaces. Agents work in parallel where the dependency graph allows. Filter the roster below by status.</p>
+
+  <div class="filters" id="roadfilters">
+    <button data-f="all" class="on">All</button>
+    <button data-f="done">Shipped</button>
+    <button data-f="active">In progress</button>
+    <button data-f="paused">Paused</button>
+    <button data-f="pending">Not started</button>
+  </div>
+
+  <table id="roadtable">
+    <thead><tr><th>ID</th><th>Agent</th><th>Deliverable</th><th>Depends</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr data-s="done"><td><span class="id">A1</span></td><td>Architect</td><td>Monorepo scaffold, shared types, CI, conventions</td><td>none</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">B1</span></td><td>Ephemeris Core</td><td>astro-core: longitudes, signs, retrograde, aspect detection, 34 tests</td><td>A1</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">B2</span></td><td>Chart Renderer</td><td>chart-svg: wheel, glyphs, aspect lines, theme tokens</td><td>A1</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">C1</span></td><td>Drag &harr; time</td><td>Pointer drag on glyphs, inverse solver, momentum, keyboard a11y</td><td>B1, B2</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="active"><td><span class="id">C2</span></td><td>Date &amp; natal input</td><td>Date + natal UI shipped (/chart, Big Three, transit-to-natal, share URLs); synastry grid pending</td><td>B1, B2</td><td><span class="badge b-active">in progress</span></td></tr>
+      <tr data-s="done"><td><span class="id">D1</span></td><td>Content &amp; SEO</td><td>358-URL sitemap, 325 aspect pages, sign + planet pages, PWA manifest</td><td>B1</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="paused"><td><span class="id">D2</span></td><td>MCP Server</td><td>6 tools verified; precompute + monetization + listings on hold</td><td>B1</td><td><span class="badge b-paused">paused</span></td></tr>
+      <tr data-s="pending"><td><span class="id">E1</span></td><td>Growth &amp; Ads</td><td>Network-agnostic ad layer, internal linking, sky-today, affiliate, email</td><td>C1, D1</td><td><span class="badge b-pending">not started</span></td></tr>
+      <tr data-s="pending"><td><span class="id">E2</span></td><td>QA &amp; Performance</td><td>Accuracy audit vs astro.com, solver correctness, Lighthouse 90+</td><td>C1, C2, D2</td><td><span class="badge b-pending">not started</span></td></tr>
+      <tr data-s="done"><td><span class="id">F1</span></td><td>Infra (GCP)</td><td>Terraform + CI shipped (phase 1); Dockerfile + deploy is phase 2</td><td>A1</td><td><span class="badge b-done">phase 1</span></td></tr>
+      <tr data-s="done"><td><span class="id">R1</span></td><td>Market Research</td><td>Competitive strategy doc, refresh quarterly</td><td>none</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">B3</span></td><td>Ephemeris extensions</td><td>Luminary orbs, true node, moon phase, VoC, Ascendant/MC, aspect scoring (Chiron + quincunx deferred to P2)</td><td>B1</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">C3</span></td><td>Rising Sign &amp; location</td><td>Birth time + offline city search, Big Three panel, Whole Sign ring</td><td>B3, C2</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">D3</span></td><td>Planet-in-sign</td><td>144 pages with computed next-in-sign dates + composed copy + MiniWheel</td><td>B1</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="done"><td><span class="id">D4</span></td><td>Sky Today: Moon</td><td>Moon phase, illumination, void-of-course; /sky + /moon explainer</td><td>B3</td><td><span class="badge b-done">shipped</span></td></tr>
+      <tr data-s="pending"><td><span class="id">D5</span></td><td>Content depth</td><td>Deepen 325 aspect + 12 sign + 12 planet pages beyond templated copy</td><td>D1</td><td><span class="badge b-pending">not started</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="panel">
+    <h3>Feature tiers</h3>
+    <table>
+      <thead><tr><th>Tier</th><th>Feature</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tier P0">P0</span></td><td>Live clock; draggable planets &harr; date; aspect lines with orbs; tap-to-explain</td><td><span class="badge b-done">live</span></td></tr>
+        <tr><td><span class="tier P1">P1</span></td><td>Date input to jump the clock to any specific date (the only date/birth-data feature in P1)</td><td><span class="badge b-done">live</span></td></tr>
+        <tr><td><span class="tier P1">P1</span></td><td>Luminary-weighted orbs; moon phase + void-of-course (lunar nodes: Mean node only)</td><td><span class="badge b-done">B3 live</span></td></tr>
+        <tr><td><span class="tier P1">P1</span></td><td>Planet-in-sign pages (144), computed next-in-sign dates</td><td><span class="badge b-done">D3 live</span></td></tr>
+        <tr><td><span class="tier P2">P2</span></td><td>Birthdate input, natal overlay + transit-to-natal aspects (moved P1 &rarr; P2 on 12 Jul, code already shipped)</td><td><span class="badge b-done">built, deferred to P2</span></td></tr>
+        <tr><td><span class="tier P2">P2</span></td><td>Big Three: Sun, Moon, Rising (Whole Sign ring only); moved P1 &rarr; P2 with the natal input it needs</td><td><span class="badge b-done">built, deferred to P2</span></td></tr>
+        <tr><td><span class="tier P2">P2</span></td><td>Chiron (precomputed JPL table); quincunx behind a toggle</td><td><span class="badge b-pending">B3, deferred to P2</span></td></tr>
+        <tr><td><span class="tier P2">P2</span></td><td>Synastry (two natal charts + inter-aspects); shareable URLs + OG images</td><td><span class="badge b-active">math done, grid pending</span></td></tr>
+        <tr><td><span class="tier P2">P2</span></td><td>Paid reports (natal, year ahead, relationship blueprint); one-time PDF via Merchant of Record</td><td><span class="badge b-pending">P2, may slip to P3</span></td></tr>
+        <tr><td><span class="tier P3">P3</span></td><td>Numbered houses + house systems (Placidus, Equal)</td><td><span class="badge b-pending">deferred, on hold</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ FINANCIALS ============ -->
+<section id="financials">
+  <h2 class="sec"><span class="n">05</span> Revenue &amp; cost estimates</h2>
+  <p class="lede">These figures are an illustrative model, not repo commitments. They combine the market and RPM benchmarks in the strategy docs with standard display-ad economics. Traffic figures in the source docs are third-party estimates, so treat everything here as order-of-magnitude. Pick a scenario:</p>
+
+  <div class="scentabs" id="scentabs">
+    <button data-sc="cons"><span class="st">Conservative</span><span class="sv">~$59K / yr</span></button>
+    <button data-sc="base" class="on"><span class="st">Base case</span><span class="sv">~$490K / yr</span></button>
+    <button data-sc="opt"><span class="st">Optimistic</span><span class="sv">~$2.8M / yr</span></button>
+  </div>
+
+  <div class="grid g4">
+    <div class="stat"><div class="v" id="s-sessions">&ndash;</div><div class="l">Sessions / mo</div></div>
+    <div class="stat"><div class="v" id="s-pv">&ndash;</div><div class="l">Pageviews / mo</div></div>
+    <div class="stat"><div class="v" id="s-rev">&ndash;</div><div class="l">Revenue / mo</div></div>
+    <div class="stat"><div class="v" id="s-margin">&ndash;</div><div class="l">Gross margin</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="panel">
+      <h3>Monthly revenue by source</h3>
+      <table class="breakdown">
+        <thead><tr><th>Source</th><th>Monthly</th></tr></thead>
+        <tbody id="revbody"></tbody>
+        <tfoot><tr><th>Total</th><th id="revtotal"></th></tr></tfoot>
+      </table>
+      <p class="note" id="rev-note"></p>
+    </div>
+    <div class="panel">
+      <h3>Monthly infrastructure cost</h3>
+      <table class="breakdown">
+        <thead><tr><th>Item</th><th>Monthly</th></tr></thead>
+        <tbody id="costbody"></tbody>
+        <tfoot><tr><th>Total</th><th id="costtotal"></th></tr></tfoot>
+      </table>
+      <p class="note">GCP Cloud Run scales to zero pre-launch, so cost tracks traffic. Cloud CDN egress is the dominant line at scale. High margin because the site is static-leaning ISR plus a lightweight MCP.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Annualized trajectory (illustrative)</h3>
+    <div class="barchart" id="revbars"></div>
+    <div class="legend"><span><span class="swatch" style="background:#C9A227"></span> annual revenue</span><span><span class="swatch" style="background:#6E9BC5"></span> annual infra cost</span></div>
+    <p class="note" style="margin-top:10px">Bars show a rough ramp toward the selected scenario as SEO compounds and the ad network graduates up the staircase. SEO is a months-to-years game, so year 1 sits well below steady state.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Key assumptions</h3>
+    <div class="assump" id="assumptions"></div>
+    <table>
+      <thead><tr><th>Lever</th><th>Basis in the docs</th></tr></thead>
+      <tbody>
+        <tr><td>RPM staircase</td><td>Launch on AdSense, graduate to Ezoic (~10k sessions/mo), then Mediavine (50k) or Raptive (100k pageviews) for roughly 2x RPM on identical traffic.</td></tr>
+        <tr><td>Session depth</td><td>astro-seek benchmark is ~10-minute sessions. The draggable wheel plus internal linking and an embedded wheel on content pages is the pages-per-session multiplier.</td></tr>
+        <tr><td>Geo mix</td><td>Tier-1 (US, UK, CA, AU) RPMs run roughly 10x tier-3; astrology skews heavily international, so blended RPM is dragged down unless the SEO wedge biases tier-1.</td></tr>
+        <tr><td>MCP revenue</td><td>Explicitly modest near-term (hundreds to low-thousands per month); its real value is attributed site sessions, counted under ads.</td></tr>
+        <tr><td>Affiliate</td><td>This audience converts on books, reading apps, and gifts; a contextual module can rival display on the same page.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Not modeled: one-time build labor (the build is agent-driven, near-zero cash cost), paid marketing (the plan is organic SEO plus share loops), and any subscription or paid-report line (explicitly out of scope).</p>
+  </div>
+</section>
+
+<div class="footer">
+  Built from PLAN.md, tasks/README.md, competitive-strategy.md, ad-monetization-review.md, and pricing-and-accounts-evaluation.md &bull; Starcharts snapshot 12 July 2026
+  <div style="margin-top:10px"><span class="pill">signs gold</span> <span class="pill">planets silver</span> <span class="pill">soft verdigris</span> <span class="pill">hard steel blue</span></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ---- nav / tabs ----
+const navBtns=[...document.querySelectorAll('nav button')];
+const secs=[...document.querySelectorAll('section')];
+navBtns.forEach(b=>b.addEventListener('click',()=>{
+  navBtns.forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  secs.forEach(s=>s.classList.toggle('show', s.id===b.dataset.t));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(b.dataset.t==='execution') runProgress();
+}));
+
+// ---- count-up stats ----
+function countUp(el){
+  const target=+el.dataset.count; const dur=900; const t0=performance.now();
+  (function step(now){ const p=Math.min(1,(now-t0)/dur);
+    el.textContent=Math.round(target*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(step); })(t0);
+}
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){countUp(e.target); io.unobserve(e.target);}}));
+document.querySelectorAll('.stat .v[data-count]').forEach(el=>io.observe(el));
+
+// ---- execution progress ----
+let progressRun=false;
+function runProgress(){
+  if(progressRun) return; progressRun=true;
+  const pct=85; // shipped-weighted build progress
+  setTimeout(()=>{document.getElementById('progfill').style.width=pct+'%';
+    let n=0; const iv=setInterval(()=>{n+=2; if(n>=pct){n=pct; clearInterval(iv);}
+      document.getElementById('progpct').textContent=n+'%';},18);},120);
+}
+
+// ---- roadmap filter ----
+const fbtns=[...document.querySelectorAll('#roadfilters button')];
+fbtns.forEach(b=>b.addEventListener('click',()=>{
+  fbtns.forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  const f=b.dataset.f;
+  document.querySelectorAll('#roadtable tbody tr').forEach(tr=>{
+    tr.classList.toggle('hide', f!=='all' && tr.dataset.s!==f);
+  });
+}));
+
+// ---- financial model ----
+const money=n=> n>=1e6? '$'+(n/1e6).toFixed(n>=1e7?1:2)+'M' : n>=1e3? '$'+Math.round(n/1e3)+'K' : '$'+Math.round(n);
+const fmt=n=> n>=1e6? (n/1e6).toFixed(1)+'M' : n>=1e3? Math.round(n/1e3)+'K' : ''+Math.round(n);
+
+const scenarios={
+  cons:{ label:'Conservative', sessions:150000, ppv:3, rpm:8, network:'Ezoic',
+    ads:3600, reports:600, mcp:300, aff:400,
+    cost:[['Cloud Run x2 (web + MCP)',15],['Cloud CDN egress',20],['Logging, registry, misc',10],['Domain + certs (amortized)',5]],
+    ramp:[8,32,59],
+    note:'~150K sessions/mo at 3 pages each on an Ezoic-tier ~$8 page RPM; paid reports a thin side line.',
+    assume:'Modest SEO traction, blended (international-heavy) RPM near $8, session depth held to 3 pages. Reports, MCP, and affiliate are small side lines.' },
+  base:{ label:'Base case', sessions:600000, ppv:4, rpm:14, network:'Mediavine',
+    ads:33600, reports:4000, mcp:1000, aff:2500,
+    cost:[['Cloud Run x2 (autoscaled)',80],['Cloud CDN + load balancer',150],['Cloud Armor (MCP rate limit)',10],['Logging + monitoring',40]],
+    ramp:[60,250,493],
+    note:'~600K sessions/mo at 4 pages each on a Mediavine-tier ~$14 page RPM; paid reports the #2 line.',
+    assume:'Programmatic SEO compounds over ~18 months, network graduates to Mediavine, wheel + internal linking lift depth to 4 pages, SEO wedge biases tier-1 geos so blended RPM reaches ~$14. Paid reports convert a fraction of a percent of birth-chart sessions.' },
+  opt:{ label:'Optimistic', sessions:2000000, ppv:5, rpm:20, network:'Raptive',
+    ads:200000, reports:20000, mcp:3000, aff:12000,
+    cost:[['Cloud Run x2 (autoscaled)',400],['Cloud CDN egress at scale',700],['Cloud Armor + load balancer',60],['Logging + monitoring',120]],
+    ramp:[180,950,2820],
+    note:'~2M sessions/mo at 5 pages each on a Raptive-tier ~$20 page RPM; reports scale with birth-chart traffic.',
+    assume:'The toy goes semi-viral via share loops and MCP referrals, sky-today drives daily returns, Raptive-tier demand and strong tier-1 mix push blended RPM to ~$20. Paid reports ride the same birth-chart traffic.' }
+};
+
+function renderScenario(key){
+  const s=scenarios[key];
+  const pv=s.sessions*s.ppv;
+  const totalRev=s.ads+s.reports+s.mcp+s.aff;
+  const totalCost=s.cost.reduce((a,c)=>a+c[1],0);
+  const margin=Math.round((1-totalCost/totalRev)*100);
+
+  document.getElementById('s-sessions').textContent=fmt(s.sessions);
+  document.getElementById('s-pv').textContent=fmt(pv);
+  document.getElementById('s-rev').textContent=money(totalRev);
+  document.getElementById('s-margin').textContent=margin+'%';
+
+  document.getElementById('revbody').innerHTML=
+    `<tr><td>Display ads (${s.network})</td><td>${money(s.ads)}</td></tr>`+
+    `<tr><td>Paid reports (P2)</td><td>${money(s.reports)}</td></tr>`+
+    `<tr><td>Affiliate + email</td><td>${money(s.aff)}</td></tr>`+
+    `<tr><td>MCP paid tier</td><td>${money(s.mcp)}</td></tr>`;
+  document.getElementById('revtotal').textContent=money(totalRev);
+  document.getElementById('rev-note').textContent=s.note;
+
+  document.getElementById('costbody').innerHTML=
+    s.cost.map(c=>`<tr><td>${c[0]}</td><td>$${c[1]}</td></tr>`).join('');
+  document.getElementById('costtotal').textContent='$'+totalCost;
+
+  document.getElementById('assumptions').textContent=s.assume;
+
+  // bars: annual revenue vs cost, 3-year ramp
+  const annualCost=[totalCost*12*0.15, totalCost*12*0.5, totalCost*12];
+  const rev=s.ramp.map(v=>v*1000);
+  const max=Math.max(...rev);
+  const yrs=['Year 1','Year 2','Year 3 (steady)'];
+  document.getElementById('revbars').innerHTML=rev.map((r,i)=>{
+    const rh=Math.max(2,(r/max)*160), ch=Math.max(2,(annualCost[i]/max)*160);
+    return `<div class="bar"><div class="amt">${money(r)}</div>
+      <div class="fill" style="height:0" data-h="${rh}"></div>
+      <div class="fill cost" style="height:0" data-h="${ch}" title="infra cost"></div>
+      <div class="yr">${yrs[i]}</div></div>`;
+  }).join('');
+  requestAnimationFrame(()=>document.querySelectorAll('#revbars .fill').forEach(f=>f.style.height=f.dataset.h+'px'));
+}
+
+const scbtns=[...document.querySelectorAll('#scentabs button')];
+scbtns.forEach(b=>b.addEventListener('click',()=>{
+  scbtns.forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  renderScenario(b.dataset.sc);
+}));
+renderScenario('base');
+</script>
+</body>
+</html>
