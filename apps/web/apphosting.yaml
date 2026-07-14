@@ -11,19 +11,27 @@ runConfig:
   memoryMiB: 512
 
 env:
-  # Origin-fence secret (hardening spec B6, NET-1). Shared with the Cloudflare
-  # Transform Rule that injects the x-origin-fence header. RUNTIME only: read by
-  # apps/web/middleware.ts at request time, never built into the client bundle,
-  # never NEXT_PUBLIC. Provision the Secret Manager secret `origin-fence-secret`
-  # and grant the App Hosting runtime service account access (runbook step 7),
-  # then set the same value in the Cloudflare Transform Rule.
-  - variable: ORIGIN_FENCE_SECRET
-    secret: origin-fence-secret
-    availability: [RUNTIME]
+  # Origin-fence secret (hardening spec B6, NET-1), deliberately deferred out
+  # of the first deploy (2026-07-13): apps/web/middleware.ts fails OPEN only
+  # while this var is entirely unset, so provisioning the Secret Manager
+  # secret before Cloudflare's matching Transform Rule exists would 403 every
+  # request at the origin, since nothing would ever supply the x-origin-fence
+  # header it checks for. Re-add this block, provision `origin-fence-secret`
+  # in Secret Manager, and grant the App Hosting runtime service account
+  # access (runbook step 7) together with the Cloudflare setup, not before.
+  #   - variable: ORIGIN_FENCE_SECRET
+  #     secret: origin-fence-secret
+  #     availability: [RUNTIME]
 
-# Future non-secret values (E1 ads/analytics) go inline under env: with
-# availability [BUILD, RUNTIME]; secrets always go through Secret Manager via
-# `secret:`, never inline (see runbook).
+# Future non-secret values (E1 ads/analytics, E4 consent) go inline under env:
+# with availability [BUILD, RUNTIME]; secrets always go through Secret Manager
+# via `secret:`, never inline (see runbook).
 #   - variable: NEXT_PUBLIC_ADSENSE_CLIENT
 #     value: ca-pub-xxxxxxxx
+#     availability: [BUILD, RUNTIME]
+#   # Set to "true" once "Privacy & messaging" is enabled in the AdSense
+#   # console (Funding Choices, the owner-chosen CMP for EEA/UK, 2026-07-13).
+#   # Requires NEXT_PUBLIC_ADSENSE_CLIENT above to already be set.
+#   - variable: NEXT_PUBLIC_GOOGLE_CMP_ENABLED
+#     value: 'true'
 #     availability: [BUILD, RUNTIME]
