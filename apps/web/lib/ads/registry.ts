@@ -75,11 +75,6 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     reserved: { mobile: [300, 250], desktop: [728, 90] },
     lazyDefault: true,
     refreshDefault: true,
-    // Created as fixed 728x90 (desktop only): a fixed unit can't also serve
-    // the 300x250 mobile shape, that needs a different aspect ratio, not a
-    // resize. Fills on desktop only until this unit is switched to
-    // Responsive in the AdSense console; mobile stays an empty placeholder.
-    fixedSize: [728, 90],
     networkUnit: { adsense: '1476591554' },
   },
   'clock-sidebar': {
@@ -96,8 +91,6 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     reserved: { mobile: [300, 250], desktop: [728, 90] },
     lazyDefault: true,
     refreshDefault: false,
-    // Same fixed-728x90-desktop-only situation as clock-below-table above.
-    fixedSize: [728, 90],
     networkUnit: { adsense: '9163509887' },
   },
   'mobile-anchor': {
