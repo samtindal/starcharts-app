@@ -23,6 +23,14 @@ export interface ResolvedSlot {
   mobileOnly?: boolean;
   /** AdSense's native in-article format (fluid layout, centered) instead of a plain responsive display unit. */
   inArticle?: boolean;
+  /**
+   * Set when the AdSense unit was created as Fixed size rather than
+   * Responsive: AdSense has no per-breakpoint sizing, so a fixed unit is
+   * locked to this one literal pixel box. Only mounted when the active
+   * breakpoint's `reserved` size matches this exactly; otherwise the slot
+   * stays an empty placeholder rather than force a mismatched creative.
+   */
+  fixedSize?: [w: number, h: number];
   networkUnit: Partial<Record<ProviderName, string>>;
 }
 
@@ -49,22 +57,30 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     reserved: { mobile: [300, 250], desktop: [336, 280] },
     lazyDefault: true,
     refreshDefault: false,
-    networkUnit: {},
+    networkUnit: { adsense: '6641856545' },
   },
   'content-sidebar': {
     name: 'content-sidebar',
-    reserved: { mobile: [0, 0], desktop: [160, 600] },
+    // AdSense created this as a fixed 160x900 (large skyscraper), not the
+    // 160x600 originally assumed; reserved matches what was actually made.
+    reserved: { mobile: [0, 0], desktop: [160, 900] },
     lazyDefault: true,
     refreshDefault: false,
     desktopOnly: true,
-    networkUnit: {},
+    fixedSize: [160, 900],
+    networkUnit: { adsense: '7076402590' },
   },
   'clock-below-table': {
     name: 'clock-below-table',
     reserved: { mobile: [300, 250], desktop: [728, 90] },
     lazyDefault: true,
     refreshDefault: true,
-    networkUnit: {},
+    // Created as fixed 728x90 (desktop only): a fixed unit can't also serve
+    // the 300x250 mobile shape, that needs a different aspect ratio, not a
+    // resize. Fills on desktop only until this unit is switched to
+    // Responsive in the AdSense console; mobile stays an empty placeholder.
+    fixedSize: [728, 90],
+    networkUnit: { adsense: '1476591554' },
   },
   'clock-sidebar': {
     name: 'clock-sidebar',
@@ -72,14 +88,17 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     lazyDefault: true,
     refreshDefault: true,
     desktopOnly: true,
-    networkUnit: {},
+    fixedSize: [160, 600],
+    networkUnit: { adsense: '8197912578' },
   },
   'sky-below-fold': {
     name: 'sky-below-fold',
     reserved: { mobile: [300, 250], desktop: [728, 90] },
     lazyDefault: true,
     refreshDefault: false,
-    networkUnit: {},
+    // Same fixed-728x90-desktop-only situation as clock-below-table above.
+    fixedSize: [728, 90],
+    networkUnit: { adsense: '9163509887' },
   },
   'mobile-anchor': {
     name: 'mobile-anchor',
@@ -87,6 +106,7 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     lazyDefault: false,
     refreshDefault: false,
     mobileOnly: true,
-    networkUnit: {},
+    fixedSize: [320, 50],
+    networkUnit: { adsense: '8030959832' },
   },
 };

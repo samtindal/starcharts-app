@@ -47,18 +47,37 @@ export const adsenseProvider: AdProvider = {
     const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
     const unit = slot.networkUnit.adsense;
     if (!client || !unit || typeof document === 'undefined') return; // stay a placeholder
+
+    if (slot.fixedSize) {
+      // A fixed-size AdSense unit is locked to the one literal box it was
+      // created at; there's no per-breakpoint sizing on AdSense's side. Only
+      // fill when the active breakpoint's reserved size actually matches
+      // that box (e.g. a desktop-only slot, or a slot whose mobile and
+      // desktop reserved sizes happen to be the same fixed unit); otherwise
+      // leave the placeholder empty rather than stretch/crop a mismatched
+      // creative into the wrong shape.
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      const active = isDesktop ? slot.reserved.desktop : slot.reserved.mobile;
+      if (active[0] !== slot.fixedSize[0] || active[1] !== slot.fixedSize[1]) return;
+    }
+
     const ins = document.createElement('ins');
     ins.className = 'adsbygoogle';
-    ins.style.display = 'block';
     ins.dataset.adClient = client;
     ins.dataset.adSlot = unit;
     if (slot.inArticle) {
       // AdSense's native in-article format: fluid layout, centered, sized by
-      // the creative rather than the fixed/auto responsive box below.
+      // the creative rather than a fixed or auto-responsive box.
+      ins.style.display = 'block';
       ins.style.textAlign = 'center';
       ins.dataset.adLayout = 'in-article';
       ins.dataset.adFormat = 'fluid';
+    } else if (slot.fixedSize) {
+      ins.style.display = 'inline-block';
+      ins.style.width = `${slot.fixedSize[0]}px`;
+      ins.style.height = `${slot.fixedSize[1]}px`;
     } else {
+      ins.style.display = 'block';
       ins.dataset.adFormat = 'auto';
       ins.dataset.fullWidthResponsive = 'true';
     }
