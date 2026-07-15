@@ -21,6 +21,8 @@ export interface ResolvedSlot {
   refreshDefault: boolean;
   desktopOnly?: boolean;
   mobileOnly?: boolean;
+  /** AdSense's native in-article format (fluid layout, centered) instead of a plain responsive display unit. */
+  inArticle?: boolean;
   networkUnit: Partial<Record<ProviderName, string>>;
 }
 
@@ -32,14 +34,15 @@ export const REGISTRY: Record<SlotName, ResolvedSlot> = {
     reserved: { mobile: [300, 250], desktop: [336, 280] },
     lazyDefault: false,
     refreshDefault: false,
-    networkUnit: {},
+    inArticle: true,
+    networkUnit: { adsense: '9538914408' },
   },
   'content-footer': {
     name: 'content-footer',
     reserved: { mobile: [300, 250], desktop: [728, 90] },
     lazyDefault: true,
     refreshDefault: false,
-    networkUnit: {},
+    networkUnit: { adsense: '8581055950' },
   },
   'content-in-content-3': {
     name: 'content-in-content-3',

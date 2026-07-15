@@ -52,6 +52,16 @@ export const adsenseProvider: AdProvider = {
     ins.style.display = 'block';
     ins.dataset.adClient = client;
     ins.dataset.adSlot = unit;
+    if (slot.inArticle) {
+      // AdSense's native in-article format: fluid layout, centered, sized by
+      // the creative rather than the fixed/auto responsive box below.
+      ins.style.textAlign = 'center';
+      ins.dataset.adLayout = 'in-article';
+      ins.dataset.adFormat = 'fluid';
+    } else {
+      ins.dataset.adFormat = 'auto';
+      ins.dataset.fullWidthResponsive = 'true';
+    }
     ins.id = `adsbygoogle-${slot.name}-${unitCounter++}`;
     el.appendChild(ins);
     try {
