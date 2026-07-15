@@ -23,11 +23,13 @@ export default function SkyToday() {
   return (
     <div className="prose">
       <Crumbs items={[{ label: 'Clock', href: '/' }, { label: 'The sky today' }]} />
+      <AdSlot slot="mobile-anchor" template="sky" />
       <h1>The sky today</h1>
       <p className="lede">
         A reading of what stands out in the sky right now, the tightest and most significant aspects currently
         in orb, ranked strongest first.
       </p>
+      <AdSlot slot="content-sidebar" template="sky" />
 
       {today.length === 0 ? (
         <p>No major aspects are in tight orb right now. Watch the sky change on the <Link href="/">live clock</Link>.</p>

@@ -67,6 +67,7 @@ export default async function PlanetPage({ params }: { params: Promise<{ planet:
   return (
     <div className="prose">
       <Crumbs items={[{ label: 'Planets', href: '/planets' }, { label: displayName(p) }]} />
+      <AdSlot slot="mobile-anchor" template="planet" />
       <h1><span className="glyph">{T(PLANET_GLYPH[p])}</span> {displayName(p)}</h1>
       <p className="lede">{ARCHETYPE[p][0].toUpperCase() + ARCHETYPE[p].slice(1)}.</p>
       <p>{PLANET_BLURB[p]}</p>
@@ -106,6 +107,7 @@ export default async function PlanetPage({ params }: { params: Promise<{ planet:
       {paragraphs.map((para, idx) => <p key={idx}>{para}</p>)}
 
       <AdSlot slot="content-in-article" template="planet" />
+      <AdSlot slot="content-sidebar" template="planet" />
 
       {isMoon && (
         <>
@@ -178,6 +180,9 @@ export default async function PlanetPage({ params }: { params: Promise<{ planet:
           </p>
         </>
       )}
+
+      <AdSlot slot="content-in-content-3" template="planet" />
+
       <h2>{displayName(p)} in each sign</h2>
       <ul className="chip-row">
         {SIGNS.map((sg, i) => (

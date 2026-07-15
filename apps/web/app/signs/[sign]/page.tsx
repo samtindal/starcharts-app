@@ -39,6 +39,7 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
   return (
     <div className="prose">
       <Crumbs items={[{ label: 'Signs', href: '/signs' }, { label: s }]} />
+      <AdSlot slot="mobile-anchor" template="sign" />
       <h1><span className="glyph">{T(SIGN_GLYPH[i])}</span> {s}</h1>
       <p className="lede">{info.keywords[0].toUpperCase() + info.keywords.slice(1)}.</p>
       <p>
@@ -63,6 +64,7 @@ export default async function SignPage({ params }: { params: Promise<{ sign: str
       {paragraphs.map((para, idx) => <p key={idx}>{para}</p>)}
 
       <AdSlot slot="content-in-article" template="sign" />
+      <AdSlot slot="content-sidebar" template="sign" />
 
       <h2>The planets in {s}</h2>
       <ul className="chip-row">

@@ -122,6 +122,7 @@ export default async function AspectPage({ params }: { params: Promise<{ slug: s
         { label: `${displayName(a)} ${type} ${displayName(b)}` },
       ]}
       />
+      <AdSlot slot="mobile-anchor" template="aspect" />
       <h1>
         <span className="glyph">{T(PLANET_GLYPH[a])} {T(ASPECT_SYMBOL[type])} {T(PLANET_GLYPH[b])}</span>{' '}
         {displayName(a)} {type} {displayName(b)}
@@ -130,6 +131,7 @@ export default async function AspectPage({ params }: { params: Promise<{ slug: s
       {paragraphs.slice(1).map((para, i) => <p key={i}>{para}</p>)}
 
       <AdSlot slot="content-in-article" template="aspect" />
+      <AdSlot slot="content-sidebar" template="aspect" />
 
       <p>
         Here the {type} joins <Link href={planetPath(a)}>{displayName(a)}</Link> ({ARCHETYPE[a]}) with{' '}
@@ -153,6 +155,8 @@ export default async function AspectPage({ params }: { params: Promise<{ slug: s
           <p className="muted">Computed from the ephemeris (UTC), not copied from a table.</p>
         </>
       )}
+
+      <AdSlot slot="content-in-content-3" template="aspect" />
 
       <h2>More on this pair</h2>
       <ul className="chip-row">

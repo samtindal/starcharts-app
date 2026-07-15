@@ -102,6 +102,7 @@ export default async function PlanetInSignPage(
         { label: `in ${s}` },
       ]}
       />
+      <AdSlot slot="mobile-anchor" template="planet-in-sign" />
 
       <h1>
         <span className="glyph">{T(PLANET_GLYPH[p])}</span> {displayName(p)} in{' '}
@@ -123,6 +124,7 @@ export default async function PlanetInSignPage(
       ))}
 
       <AdSlot slot="content-in-article" template="planet-in-sign" />
+      <AdSlot slot="content-sidebar" template="planet-in-sign" />
 
       <h2>When {displayName(p)} is in {s}</h2>
       {whenLines.map((line, i) => (
@@ -151,6 +153,8 @@ export default async function PlanetInSignPage(
           </tbody></table>
         </>
       )}
+
+      <AdSlot slot="content-in-content-3" template="planet-in-sign" />
 
       <h2>{displayName(p)} through the other signs</h2>
       <ul className="chip-row">

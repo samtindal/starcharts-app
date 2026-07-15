@@ -191,6 +191,18 @@ a.asp.asp-top b { color: var(--gold-bright); }
 }
 .adslot--clock-sidebar { z-index: 5; }
 
+/* Mobile anchor: pinned to the viewport bottom, unlike a normal mobile-only
+   slot which just renders inline. Content pages add matching bottom padding
+   (below) so the anchor never covers the last line of copy. */
+.adslot--mobile-anchor {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; margin: 0; width: 100%;
+  background: var(--bg); border-top: 1px solid var(--line-faint);
+}
+@media (max-width: 767px) {
+  /* 50px anchor height so the last line of content is never hidden under it. */
+  .prose { padding-bottom: 66px; }
+}
+
 .consent-banner {
   position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 50;
   max-width: 560px; margin: 0 auto;
@@ -209,3 +221,8 @@ a.asp.asp-top b { color: var(--gold-bright); }
 .consent-actions button:hover { border-color: var(--gold); color: var(--gold-bright); }
 .consent-accept { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--bg-deep) !important; }
 .consent-accept:hover { background: var(--gold-bright) !important; }
+@media (max-width: 767px) {
+  /* Clear the mobile-anchor ad slot's 50px height plus its own 16px margin,
+     so the banner never sits behind the anchor on content pages. */
+  .consent-banner { bottom: 66px; }
+}
