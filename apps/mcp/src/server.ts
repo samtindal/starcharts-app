@@ -2,7 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { chartAt, detectAspects, natalChart, transitAspects, synastry } from '@starcharts/astro-core';
+import { chartAt, detectAspects } from '@starcharts/astro-core';
 import { chartPayload, describeAspects } from './format.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -55,49 +55,6 @@ function buildServer(): McpServer {
         date: d.toISOString(),
         aspects: aspects.map((a) => ({ a: a.a, b: a.b, type: a.type, orb: +a.orb.toFixed(2), applying: a.applying })),
         summary: describeAspects(aspects),
-      });
-    },
-  );
-
-  server.tool(
-    'get_natal_chart',
-    'Natal (birth) chart: positions and natal aspects. If birth time is unknown, use local noon and tell the user the Moon may be off by up to ~7°.',
-    { birth: isoDate },
-    async ({ birth }) => {
-      const b = parseDate(birth);
-      const n = natalChart(b);
-      return asText(chartPayload(b, n.positions, n.aspects));
-    },
-  );
-
-  server.tool(
-    'get_transits',
-    'Transiting-to-natal aspects: how the sky at `date` (default now) touches the natal chart of someone born at `birth`.',
-    { birth: isoDate, date: isoDate.optional() },
-    async ({ birth, date }) => {
-      const b = parseDate(birth);
-      const d = date ? parseDate(date) : new Date();
-      const hits = transitAspects(b, d);
-      return asText({
-        birth: b.toISOString(),
-        date: d.toISOString(),
-        transits: hits.map((a) => ({ transiting: a.a, natal: a.b, type: a.type, orb: +a.orb.toFixed(2), applying: a.applying })),
-        summary: describeAspects(hits, ['transiting', 'natal']),
-      });
-    },
-  );
-
-  server.tool(
-    'get_synastry',
-    'Synastry between two birth charts: inter-chart aspects for relationship analysis.',
-    { birthA: isoDate, birthB: isoDate },
-    async ({ birthA, birthB }) => {
-      const s = synastry(parseDate(birthA), parseDate(birthB));
-      return asText({
-        birthA: s.a.birth.toISOString(),
-        birthB: s.b.birth.toISOString(),
-        aspects: s.aspects.map((a) => ({ personA: a.a, personB: a.b, type: a.type, orb: +a.orb.toFixed(2) })),
-        summary: describeAspects(s.aspects, ['A', 'B']),
       });
     },
   );
